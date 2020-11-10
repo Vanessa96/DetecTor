@@ -102,7 +102,7 @@ if __name__ == '__main__':
         node_inputs = list(n.inputs())
         node_outputs = list(n.outputs())
         node_id = node_outputs[0].debugName()
-        node_scope = n.scopeName()
+        node_scope = n.scopeName().replace('__module.', '')
         node_op = n.kind()
         ops.add(node_op)
         in_nodes = []
@@ -134,6 +134,8 @@ if __name__ == '__main__':
         op_node = OpNode(node_id, node_scope, node_op, in_nodes, no_nodes)
         nodes.append(op_node)
     graph = Graph('bert-tiny', nodes, gi_nodes, go_nodes)
-    print(graph)
+    # print(graph)
+    for i, n in enumerate(graph.nodes, 1):
+        print(i, n)
     print(ops)
 
