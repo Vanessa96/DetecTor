@@ -18,6 +18,7 @@ understanding data structure of torch jit traced graph:
 [jit ir](https://github.com/pytorch/pytorch/blob/master/torch/csrc/jit/ir/ir.cpp)
 [jit operator](https://github.com/pytorch/pytorch/blob/master/torch/csrc/jit/runtime/operator.cpp)
 [jit op doc](https://pytorch.org/docs/master/jit_builtin_functions.html)
+[jit interpret graph](https://pytorch.org/docs/stable/jit.html#interpreting-graphs)
 
 nodes and values
 each node has 0, 1 or multiple input values and one output value
@@ -35,3 +36,6 @@ node: op (n.kind()), scope (n.scopeName()), id (n.output().debugName())
 only track 
     data nodes (at least one tensor in input or output) and 
     op nodes that are compute (exclude or merge access/property nodes)
+
+graph, inputs and outputs data nodes
+
