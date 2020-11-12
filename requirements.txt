@@ -1,4 +1,5 @@
 # experiment_impact_tracker==0.1.9
+graphviz==0.14.2
 natsort==7.0.1
 parse==1.18.0
 pyserial==3.4
