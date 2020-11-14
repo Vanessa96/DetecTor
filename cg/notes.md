@@ -19,6 +19,7 @@ understanding data structure of torch jit traced graph:
 [jit operator](https://github.com/pytorch/pytorch/blob/master/torch/csrc/jit/runtime/operator.cpp)
 [jit op doc](https://pytorch.org/docs/master/jit_builtin_functions.html)
 [jit interpret graph](https://pytorch.org/docs/stable/jit.html#interpreting-graphs)
+[scope info](https://github.com/pytorch/pytorch/pull/3016/files)
 
 nodes and values
 each node has 0, 1 or multiple input values and one output value
