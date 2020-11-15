@@ -61,3 +61,26 @@ resources information:
   [rapl doc (chapter 14.9)](https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-vol-3b-part-2-manual.html)
   [rapl project](http://web.eece.maine.edu/~vweaver/projects/rapl/index.html) and [rapl-read](https://github.com/deater/uarch-configure/blob/master/rapl-read/rapl-read.c)
   https://man7.org/linux/man-pages/man4/msr.4.html
+
+due to the reason [`Each sample period may be between 1 second and 1/6 second`](https://docs.nvidia.com/deploy/nvml-api/structnvmlUtilization__t.html#structnvmlUtilization__t)
+we should use [nvmlDeviceGetSamples](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1gb7d2a6d2a9b4584cd985765d1ff46c94)
+instead of `nvmlDeviceGetUtilizationRates` and `nvmlDeviceGetPowerUsage`
+
+```text
+    // To represent total power drawn by GPU
+    NVML_TOTAL_POWER_SAMPLES        = 0,
+    // To represent percent of time during which one or more kernels was
+    // executing on the GPU
+    NVML_GPU_UTILIZATION_SAMPLES    = 1,
+    // To represent percent of time during which global (device) memory was
+    // being read or written
+    NVML_MEMORY_UTILIZATION_SAMPLES = 2,
+    // To represent percent of time during which NVENC remains busy
+    NVML_ENC_UTILIZATION_SAMPLES    = 3,
+    // To represent percent of time during which NVDEC remains busy
+    NVML_DEC_UTILIZATION_SAMPLES    = 4,
+    // To represent processor clock samples
+    NVML_PROCESSOR_CLK_SAMPLES      = 5,
+    // To represent memory clock samples
+    NVML_MEMORY_CLK_SAMPLES         = 6,
+```
