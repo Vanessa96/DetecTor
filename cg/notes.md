@@ -1,3 +1,13 @@
+Installation:
+
+pyenv and pyenv-virtualenv
+https://github.com/pyenv/pyenv-virtualenv
+
+3.7.9
+nrg env
+cuda 10.2 cudnn 8.0.3
+pip torch
+
 
 ```text
 # sample jit traced graph
@@ -40,3 +50,13 @@ only track
 
 graph, inputs and outputs data nodes
 
+resources information:
+- cpu, mem util: https://man7.org/linux/man-pages/man5/proc.5.html
+- gpu util, gpu mem util, gpu power: 
+  [doc](https://docs.nvidia.com/deploy/nvml-api/index.html)
+  [api](https://github.com/NVIDIA/nvidia-settings/blob/master/src/nvml.h)
+
+- rapl, CPU/DRAM power: 
+  [rapl doc (chapter 14.9)](https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-vol-3b-part-2-manual.html)
+  [rapl project](http://web.eece.maine.edu/~vweaver/projects/rapl/index.html) and [rapl-read](https://github.com/deater/uarch-configure/blob/master/rapl-read/rapl-read.c)
+  https://man7.org/linux/man-pages/man4/msr.4.html
