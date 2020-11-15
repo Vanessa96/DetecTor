@@ -1,12 +1,13 @@
 Installation:
 
-pyenv and pyenv-virtualenv
-https://github.com/pyenv/pyenv-virtualenv
-
-3.7.9
-nrg env
+[pyenv](https://github.com/pyenv/pyenv) and [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
 cuda 10.2 cudnn 8.0.3
-pip torch
+
+`pyenv virtualenv 3.7.9 nrg`
+
+`pyenv activate nrg`
+
+`pip install -r requirements.txt`
 
 
 ```text
