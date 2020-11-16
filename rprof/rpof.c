@@ -5,9 +5,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
+#include "cpu.h"
+#include "mem.h"
+#include "nvml.h"
 
-typedef unsigned long ctime_t;
-ctime_t gettime(void) {
+typedef unsigned long utime_t;
+utime_t gettime(void) {
    struct timespec ts;
    clock_gettime(CLOCK_REALTIME, &ts);
    return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3; // microsecond
@@ -27,7 +30,7 @@ signal_callback_handler(int signum)
 // ----------------------------------------------------------------------------
 
 static int
-strtonum(char * str, ctime_t * num) {
+strtonum(char * str, utime_t * num) {
   char * p_err;
 
   *num = strtol(str, &p_err, 10);
@@ -53,7 +56,7 @@ int main(int argc, char ** argv) {
   }
   int a      = 1;
   
-  ctime_t profile_interval = 100;
+  utime_t profile_interval = 100;
   if (argc >= 2){
     if (1 == strtonum(argv[1], &profile_interval)){
       printf("failed to get profile_interval, %s, use default 100 ms\n", argv[1]); 
@@ -76,7 +79,7 @@ int main(int argc, char ** argv) {
     }
   }
 
-  ctime_t timeout = 10; // 10 s
+  utime_t timeout = 10; // 10 s
   if (argc >= 4){
     if (1 == strtonum(argv[3], &timeout)){
       printf("failed to get timeout, %s, default to 10 seconds\n", argv[1]); 
@@ -90,22 +93,55 @@ int main(int argc, char ** argv) {
   signal(SIGTERM, signal_callback_handler);
 
   // Starting profiling
-  ctime_t start_time = gettime();
-  ctime_t sample_time = gettime();
+  utime_t start_time = gettime();
+  utime_t sample_time = gettime();
+
+  nvmlReturn_t result;
+  unsigned int device_count;
+  char driver_version[80];
+  result = nvmlInit();
+  result = nvmlSystemGetDriverVersion(driver_version, 80);
+  printf("\n Driver version:  %s \n\n", driver_version);
+  result = nvmlDeviceGetCount(&device_count);
+  printf("Found %d device%s\n\n", device_count, device_count!= 1 ? "s" : "");
+  printf("Listing devices:\n");
+  for (unsigned i = 0; i < device_count; i++) 
+  {
+    nvmlDevice_t device;  
+    char name[64];  
+    nvmlComputeMode_t compute_mode;
+    result = nvmlDeviceGetHandleByIndex(i, &device);
+    result = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
+    printf("%d. %s \n", i, name);
+  } 
+  
+  unsigned long print_count = 0;
+  struct cpustat cpu_util_prev, cpu_util_cur;
+  get_stats(&cpu_util_prev, -1);
+  usleep(profile_interval); // sleep one interval to avoid negative first sample
   while (interrupt == 0 && (sample_time - start_time) < timeout)
   {
 
+    get_stats(&cpu_util_cur, -1);
+    double cpu_util = calculate_load(&cpu_util_prev, &cpu_util_cur);
     sample_time = gettime();
-    printf("sample_time=%lu\n", sample_time); 
-    fprintf(output_file, "%lu, %s %f %d\n", sample_time, "are", 1.2, 2012);
-    ctime_t delta = gettime() - sample_time;
+    fprintf(output_file, "%lu, %.1f %.1f\n", sample_time, cpu_util, 20.2);
+    if (print_count%10==0)
+    {
+      printf("\33[2K\r");
+      printf("sample: %lu, %.1f %.1f\n", sample_time, cpu_util, 20.2);
+    }
+    print_count++;
+
+    get_stats(&cpu_util_prev, -1);
+    utime_t delta = gettime() - sample_time;
     if (delta < profile_interval){
       usleep(profile_interval - delta);
     }
   }
 
   fclose(output_file);
-  printf("elapsed %.3f ms\n", (sample_time - start_time)/1e3);
-
+  result = nvmlShutdown();
+  printf("\nelapsed %.3f ms\n", (sample_time - start_time)/1e3);
   return retval;
 }
