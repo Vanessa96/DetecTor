@@ -114,13 +114,25 @@ int main(int argc, char ** argv) {
   utime_t start_time = gettime();
   utime_t sample_time = gettime();
 
-  nvmlReturn_t result;
+  nvmlReturn_t nv_status;
   unsigned int device_count;
   char driver_version[80];
-  result = nvmlInit();
-  result = nvmlSystemGetDriverVersion(driver_version, 80);
+  nv_status = nvmlInit();
+  if (NVML_SUCCESS != nv_status){
+    fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+    return nv_status;
+  }
+  nv_status = nvmlSystemGetDriverVersion(driver_version, 80);
+  if (NVML_SUCCESS != nv_status){
+    fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+    return nv_status;
+  }
   printf("\nDriver version:  %s \n\n", driver_version);
-  result = nvmlDeviceGetCount(&device_count);
+  nv_status = nvmlDeviceGetCount(&device_count);
+  if (NVML_SUCCESS != nv_status){
+    fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+    return nv_status;
+  }
   printf("Found %d device%s\n\n", device_count, device_count!= 1 ? "s" : "");
   printf("Listing devices:\n");
   for (unsigned i = 0; i < device_count; i++) 
@@ -128,8 +140,16 @@ int main(int argc, char ** argv) {
     nvmlDevice_t device;  
     char name[64];  
     nvmlComputeMode_t compute_mode;
-    result = nvmlDeviceGetHandleByIndex(i, &device);
-    result = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
+    nv_status = nvmlDeviceGetHandleByIndex(i, &device);
+    if (NVML_SUCCESS != nv_status){
+      fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+      return nv_status;
+    }
+    nv_status = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
+    if (NVML_SUCCESS != nv_status){
+      fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+      return nv_status;
+    }
     printf("%d. %s \n", i, name);
   }
   
@@ -146,25 +166,39 @@ int main(int argc, char ** argv) {
     double mem_usage = calculate_mem_usage(&mem_util);
     
     sample_time = gettime();
-    fprintf(output_file, "%.3f, %.1f, %.1f, %i", sample_time/1e6, cpu_util, mem_usage, device_count);
+    fprintf(output_file, "%.6f, %.1f, %.1f, %i", sample_time/1e6, cpu_util, mem_usage, device_count);
     if (print_count%10==0)
     {
       printf("\33[2K\r");
-      printf("t=%.3f, cpu=%.1f, mem=%.1f, n_gpu=%i", sample_time/1e6, cpu_util, mem_usage, device_count);
+      printf("t=%.6f, cpu=%.1f, mem=%.1f, n_gpu=%i", sample_time/1e6, cpu_util, mem_usage, device_count);
     }
     for (unsigned device_idx = 0; device_idx < device_count; device_idx++) 
     {
       nvmlDevice_t device;  
       char name[64];  
-      result = nvmlDeviceGetHandleByIndex(device_idx, &device);
+      nv_status = nvmlDeviceGetHandleByIndex(device_idx, &device);
+      if (NVML_SUCCESS != nv_status){
+        fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+        return nv_status;
+      }
       nvmlUtilization_t nv_util;
-      result = nvmlDeviceGetUtilizationRates(device, &nv_util);
+      nv_status = nvmlDeviceGetUtilizationRates(device, &nv_util);
+      if (NVML_SUCCESS != nv_status){
+        fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+        return nv_status;
+      }
       unsigned int gpu_util = nv_util.gpu;
       unsigned int gpu_mem_util = nv_util.memory;
-      fprintf(output_file, ", %i, %i", gpu_util, gpu_mem_util);
+      unsigned int gpu_power = 0;
+      nv_status = nvmlDeviceGetPowerUsage(device, &gpu_power);
+      if (NVML_SUCCESS != nv_status){
+        fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+        return nv_status;
+      }
+      fprintf(output_file, ", %i, %i, %i", gpu_util, gpu_mem_util, gpu_power);
       if (print_count%10==0)
       {
-        printf(", gpu=%i, gpu_mem=%i", gpu_util, gpu_mem_util);
+        printf(", gpu=%i, gpu_mem=%i, gpu_power=%i", gpu_util, gpu_mem_util, gpu_power);
       }
     }
     fprintf(output_file, "\n");
@@ -182,7 +216,11 @@ int main(int argc, char ** argv) {
   }
 
   fclose(output_file);
-  result = nvmlShutdown();
+  nv_status = nvmlShutdown();
+  if (NVML_SUCCESS != nv_status){
+    fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+    return nv_status;
+  }
   printf("\nelapsed %.3f ms\n", (sample_time - start_time)/1e3);
   return retval;
 }
