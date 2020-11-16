@@ -1,5 +1,6 @@
-#include <stdio.h>
-#include <unistd.h>
+#ifndef CPU_H
+#define CPU_H
+#include "common.h"
 
 struct cpustat {
     unsigned long t_user;
@@ -11,24 +12,12 @@ struct cpustat {
     unsigned long t_softirq;
 };
 
-void skip_lines(FILE *fp, int numlines)
-{
-    int cnt = 0;
-    char ch;
-    while((cnt < numlines) && ((ch = getc(fp)) != EOF))
-    {
-        if (ch == '\n')
-            cnt++;
-    }
-    return;
-}
-
 void get_stats(struct cpustat *st, int cpunum)
 {
     FILE *fp = fopen("/proc/stat", "r");
     int lskip = cpunum+1;
     skip_lines(fp, lskip);
-    char cpun[255];
+    char cpun[32];
     fscanf(fp, "%s %lu %lu %lu %lu %lu %lu %lu", cpun, &(st->t_user), &(st->t_nice), 
         &(st->t_system), &(st->t_idle), &(st->t_iowait), &(st->t_irq),
         &(st->t_softirq));
@@ -61,3 +50,4 @@ double calculate_load(struct cpustat *prev, struct cpustat *cur)
 
     return cpu_perc;
 }
+#endif

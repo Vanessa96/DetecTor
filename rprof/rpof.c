@@ -1,20 +1,6 @@
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <time.h>
 #include "cpu.h"
 #include "mem.h"
 #include "nvml.h"
-
-typedef unsigned long utime_t;
-utime_t gettime(void) {
-   struct timespec ts;
-   clock_gettime(CLOCK_REALTIME, &ts);
-   return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3; // microsecond
-}
 
 // ---- SIGNAL HANDLING -------------------------------------------------------
 
@@ -28,15 +14,6 @@ signal_callback_handler(int signum)
 } /* signal_callback_handler */
 
 // ----------------------------------------------------------------------------
-
-static int
-strtonum(char * str, utime_t * num) {
-  char * p_err;
-
-  *num = strtol(str, &p_err, 10);
-
-  return  (p_err == str || *p_err != 0) ? 1 : 0;
-}
 
 static const char * usage_msg = \
 "Usage: rprof [OPTION...] command [ARG...]\n"
@@ -117,6 +94,7 @@ int main(int argc, char ** argv) {
   
   unsigned long print_count = 0;
   struct cpustat cpu_util_prev, cpu_util_cur;
+  struct meminfo mem_util;
   get_stats(&cpu_util_prev, -1);
   usleep(profile_interval); // sleep one interval to avoid negative first sample
   while (interrupt == 0 && (sample_time - start_time) < timeout)
@@ -124,12 +102,13 @@ int main(int argc, char ** argv) {
 
     get_stats(&cpu_util_cur, -1);
     double cpu_util = calculate_load(&cpu_util_prev, &cpu_util_cur);
+    double mem_usage = calculate_mem_usage(&mem_util);
     sample_time = gettime();
-    fprintf(output_file, "%lu, %.1f %.1f\n", sample_time, cpu_util, 20.2);
+    fprintf(output_file, "%lu, %.1f %.1f\n", sample_time, cpu_util, mem_usage);
     if (print_count%10==0)
     {
       printf("\33[2K\r");
-      printf("sample: %lu, %.1f %.1f\n", sample_time, cpu_util, 20.2);
+      printf("sample: %lu, %.1f %.1f\n", sample_time, cpu_util, mem_usage);
     }
     print_count++;
 
