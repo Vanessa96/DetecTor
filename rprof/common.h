@@ -12,7 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
-typedef unsigned long utime_t;
+typedef unsigned long long utime_t;
 utime_t gettime(void) {
    struct timespec ts;
    clock_gettime(CLOCK_REALTIME, &ts);

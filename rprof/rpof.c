@@ -13,6 +13,47 @@ signal_callback_handler(int signum)
     interrupt = SIGTERM;
 } /* signal_callback_handler */
 
+// nvmlReturn_t nvmlDeviceGetAverageUsage(nvmlDevice_t device, nvmlSamplingType_t type, unsigned long long lastSeenTimeStamp, unsigned int* averageUsage) {
+//   if (nvmlHandle == NULL) {
+//     return (NVML_ERROR_LIBRARY_NOT_FOUND);
+//   }
+
+//   // We don't really use this because both the metrics we support
+//   // averagePowerUsage and averageGPUUtilization are unsigned int.
+//   nvmlValueType_t sampleValType;
+
+//   // This will be set to the number of samples that can be queried. We would
+//   // need to allocate an array of this size to store the samples.
+//   unsigned int sampleCount;
+
+//   // Invoking this method with `samples` set to NULL sets the sampleCount.
+//   nvmlReturn_t r = nvmlDeviceGetSamples(device, type, lastSeenTimeStamp, &sampleValType, &sampleCount, NULL);
+//   if (r != NVML_SUCCESS) {
+//     return (r);
+//   }
+
+//   // Allocate memory to store sampleCount samples.
+//   // In my experiments, the sampleCount at this stage was always 120 for
+//   // NVML_TOTAL_POWER_SAMPLES and 100 for NVML_GPU_UTILIZATION_SAMPLES
+//   nvmlSample_t* samples = (nvmlSample_t*) malloc(sampleCount * sizeof(nvmlSample_t));
+
+//   r = nvmlDeviceGetSamples(device, type, lastSeenTimeStamp, &sampleValType, &sampleCount, samples);
+//   if (r != NVML_SUCCESS) {
+//     free(samples);
+//     return (r);
+//   }
+
+//   int i = 0;
+//   unsigned int sum = 0;
+//   for (; i < sampleCount; i++) {
+//     sum += samples[i].sampleValue.uiVal;
+//   }
+//   *averageUsage = sum/sampleCount;
+
+//   free(samples);
+//   return (r);
+// }
+
 // ----------------------------------------------------------------------------
 
 static const char * usage_msg = \
@@ -40,7 +81,7 @@ int main(int argc, char ** argv) {
       // return 1;
     };
   }
-  printf("profile_interval=%lu ms\n", profile_interval);
+  printf("profile_interval=%llu ms\n", profile_interval);
   profile_interval = profile_interval * 1e3;
   FILE* output_file = stdout;
   if (argc >= 3){
@@ -63,7 +104,7 @@ int main(int argc, char ** argv) {
       // return 1;
     };
   }
-  printf("timeout=%lu s\n", timeout);
+  printf("timeout=%llu s\n", timeout);
   timeout = timeout*1e6;
   // Register signal handler for Ctrl+C and terminate signals.
   signal(SIGINT, signal_callback_handler);
@@ -78,7 +119,7 @@ int main(int argc, char ** argv) {
   char driver_version[80];
   result = nvmlInit();
   result = nvmlSystemGetDriverVersion(driver_version, 80);
-  printf("\n Driver version:  %s \n\n", driver_version);
+  printf("\nDriver version:  %s \n\n", driver_version);
   result = nvmlDeviceGetCount(&device_count);
   printf("Found %d device%s\n\n", device_count, device_count!= 1 ? "s" : "");
   printf("Listing devices:\n");
@@ -90,7 +131,7 @@ int main(int argc, char ** argv) {
     result = nvmlDeviceGetHandleByIndex(i, &device);
     result = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
     printf("%d. %s \n", i, name);
-  } 
+  }
   
   unsigned long print_count = 0;
   struct cpustat cpu_util_prev, cpu_util_cur;
@@ -103,12 +144,33 @@ int main(int argc, char ** argv) {
     get_stats(&cpu_util_cur, -1);
     double cpu_util = calculate_load(&cpu_util_prev, &cpu_util_cur);
     double mem_usage = calculate_mem_usage(&mem_util);
+    
     sample_time = gettime();
-    fprintf(output_file, "%lu, %.1f %.1f\n", sample_time, cpu_util, mem_usage);
+    fprintf(output_file, "%.3f, %.1f, %.1f, %i", sample_time/1e6, cpu_util, mem_usage, device_count);
     if (print_count%10==0)
     {
       printf("\33[2K\r");
-      printf("sample: %lu, %.1f %.1f\n", sample_time, cpu_util, mem_usage);
+      printf("t=%.3f, cpu=%.1f, mem=%.1f, n_gpu=%i", sample_time/1e6, cpu_util, mem_usage, device_count);
+    }
+    for (unsigned device_idx = 0; device_idx < device_count; device_idx++) 
+    {
+      nvmlDevice_t device;  
+      char name[64];  
+      result = nvmlDeviceGetHandleByIndex(device_idx, &device);
+      nvmlUtilization_t nv_util;
+      result = nvmlDeviceGetUtilizationRates(device, &nv_util);
+      unsigned int gpu_util = nv_util.gpu;
+      unsigned int gpu_mem_util = nv_util.memory;
+      fprintf(output_file, ", %i, %i", gpu_util, gpu_mem_util);
+      if (print_count%10==0)
+      {
+        printf(", gpu=%i, gpu_mem=%i", gpu_util, gpu_mem_util);
+      }
+    }
+    fprintf(output_file, "\n");
+    if (print_count%10==0)
+    {
+      printf("\n");
     }
     print_count++;
 
