@@ -65,10 +65,13 @@ resources information:
   [rapl project](http://web.eece.maine.edu/~vweaver/projects/rapl/index.html) and [rapl-read](https://github.com/deater/uarch-configure/blob/master/rapl-read/rapl-read.c)
   https://man7.org/linux/man-pages/man4/msr.4.html
 
+for gpu util and gpu mem util
 ideally, due to the reason [`Each sample period may be between 1 second and 1/6 second`](https://docs.nvidia.com/deploy/nvml-api/structnvmlUtilization__t.html#structnvmlUtilization__t)
 we should use [nvmlDeviceGetSamples](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1gb7d2a6d2a9b4584cd985765d1ff46c94)
-instead of `nvmlDeviceGetUtilizationRates` and `nvmlDeviceGetPowerUsage`
-but in practice, the gpu driver buffer stores ~6 samples per second
+instead of `nvmlDeviceGetUtilizationRates`
+but in practice, the gpu driver buffer stores ~6 samples per second (166ms max frequency, so no need to get samples and take average)
+
+for gpu power, `nvmlDeviceGetPowerUsage`, 20ms granularity for the `nvmlDeviceGetSamples` api
 
 ```text
     // To represent total power drawn by GPU
