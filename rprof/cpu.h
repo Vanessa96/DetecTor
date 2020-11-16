@@ -18,9 +18,12 @@ void get_stats(struct cpustat *st, int cpunum)
     int lskip = cpunum+1;
     skip_lines(fp, lskip);
     char cpun[32];
-    fscanf(fp, "%s %lu %lu %lu %lu %lu %lu %lu", cpun, &(st->t_user), &(st->t_nice),
+    int n = fscanf(fp, "%s %lu %lu %lu %lu %lu %lu %lu", cpun, &(st->t_user), &(st->t_nice),
         &(st->t_system), &(st->t_idle), &(st->t_iowait), &(st->t_irq),
         &(st->t_softirq));
+    if (n!=8){
+      fprintf(stderr, "incorrect cpu stat parsing, parsed %d\n", n);
+    }
     fclose(fp);
 	return;
 }

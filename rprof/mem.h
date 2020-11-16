@@ -10,7 +10,10 @@ struct meminfo {
 
 double calculate_mem_usage(struct meminfo *mt){
     FILE *fp = fopen("/proc/meminfo", "r");
-    fscanf(fp, "MemTotal:\t%lu kB\nMemFree:\t%lu kB\nMemAvailable:\t%lu kB\n", &(mt->t_total),&(mt->t_free),&(mt->t_available));
+    int n = fscanf(fp, "MemTotal:\t%lu kB\nMemFree:\t%lu kB\nMemAvailable:\t%lu kB\n", &(mt->t_total),&(mt->t_free),&(mt->t_available));
+    if (n!=3){
+      fprintf(stderr, "incorrect meminfo parsing, parsed %d\n", n);
+    }
     fclose(fp);
   return  (1000 * (mt->t_total - mt->t_available) / mt->t_total + 1) / 10;
 }

@@ -1,6 +1,6 @@
-NVCC	:=nvcc --cudart=static -ccbin g++
-CFLAGS	:=-O3 -std=c++14
-INC_DIR	:= .
+NVCC	:=nvcc
+# INC_DIR	:= .
+CFLAGS	:=-O3 -std=c++11
 LIB_DIR	:=
 LIBS	:=-lnvidia-ml
 
