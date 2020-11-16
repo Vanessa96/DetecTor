@@ -53,6 +53,9 @@ graph, inputs and outputs data nodes
 
 resources information:
 - cpu, mem util: https://man7.org/linux/man-pages/man5/proc.5.html
+[cpu util impl](https://www.kgoettler.com/post/proc-stat/)
+[mem util impl](https://github.com/rfjakob/earlyoom/blob/master/meminfo.c)
+
 - gpu util, gpu mem util, gpu power: 
   [doc](https://docs.nvidia.com/deploy/nvml-api/index.html)
   [api](https://github.com/NVIDIA/nvidia-settings/blob/master/src/nvml.h)
