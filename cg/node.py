@@ -6,7 +6,7 @@ __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 
 from dataclasses import dataclass
 from typing import List
-
+import torch
 from transformers import AutoConfig
 
 
