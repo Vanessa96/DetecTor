@@ -80,13 +80,15 @@ def main(args):
         start_mem_info = dict()
         end_mem_info = dict()
         for _ in range(3):
-            _ = model(input_ids)  # warmup
+            with torch.no_grad():
+                _ = model(input_ids)  # warmup
         for name, module in model.named_modules():
             # print(name, module.__class__.__name__)
             module.register_forward_pre_hook(log_start_builder(name, cu_mem))
             module.register_forward_hook(log_end_builder(name, cu_mem))
         for run in range(runs):
-            _ = model(input_ids)
+            with torch.no_grad():
+                _ = model(input_ids)
             for k, start in start_times.items():
                 duration = (end_times[k] - start) * 1000
                 start_timings[f'{run}-{k}'] = start
