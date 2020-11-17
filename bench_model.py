@@ -54,8 +54,9 @@ def main(args):
     config.hidden_act = 'gelu_fast'
     config.torchscript = True
     model = BertModel(config)
-    seq_len = 100
-    input_ids = torch.randint(1000, size=(1, seq_len), dtype=torch.long,
+    seq_len = args.input_length
+    bs = args.batch_size
+    input_ids = torch.randint(1000, size=(bs, seq_len), dtype=torch.long,
                               device=device)
     # token_type_ids = torch.zeros(input_ids.size(), dtype=torch.long,
     #                              device=device)
@@ -72,7 +73,8 @@ def main(args):
 
     if profile:
         runs = args.runs
-        timings_file = out_dir.joinpath(f'{model_name}-{runs}-timings.json')
+        file_prefix = f'{model_name}-r{runs}-b{bs}-i{seq_len}'
+        timings_file = out_dir.joinpath(f'{file_prefix}-timings.json')
         start_timings = dict()
         end_timings = dict()
         start_mem_info = dict()
@@ -102,7 +104,8 @@ def main(args):
                               'runs': args.runs})
         timings_file.write_text(timings)
     else:  # trace only to get the graph and statistics like flops, mem_static
-        cg_file = out_dir.joinpath(f'{model_name}-cg.txt')
+        file_prefix = f'{model_name}-b{bs}-i{seq_len}'
+        cg_file = out_dir.joinpath(f'{file_prefix}-cg.txt')
         trace = torch.jit.trace(model, input_ids)
         graph = trace.inlined_graph
         cg_file.write_text(str(graph))
