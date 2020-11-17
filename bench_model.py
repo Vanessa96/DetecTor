@@ -71,7 +71,8 @@ def main(args):
         print('profiling cuda memory')
 
     if profile:
-        timings_file = out_dir.joinpath(f'{model_name}-timings.json')
+        runs = args.runs
+        timings_file = out_dir.joinpath(f'{model_name}-{runs}-timings.json')
         start_timings = dict()
         end_timings = dict()
         start_mem_info = dict()
@@ -82,7 +83,7 @@ def main(args):
             # print(name, module.__class__.__name__)
             module.register_forward_pre_hook(log_start_builder(name, cu_mem))
             module.register_forward_hook(log_end_builder(name, cu_mem))
-        for run in range(args.runs):
+        for run in range(runs):
             _ = model(input_ids)
             for k, start in start_times.items():
                 duration = (end_times[k] - start) * 1000
