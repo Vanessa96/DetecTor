@@ -8,39 +8,35 @@ import argparse
 import json
 from pathlib import Path
 import torch
-from transformers import BertModel
+from transformers import AutoModel
 from transformers import AutoConfig
 
 from cg.node import construct_graph
 
-start_times = dict()
-end_times = dict()
-start_mem = dict()
-end_mem = dict()
 
+def log_builder(name, timings, global_repeats, pre_hook,
+                cu_mem=False, mem_stats=None):
+    # handle shared module compute,
+    # use global_repeats to track module call times, tested for albert
 
-def log_start_builder(name, cu_mem):
-    def log_start(m, _m_in):
-        start_times[f'{name}:{m.__class__.__name__}'] = time.perf_counter()
+    def log(m, _m_in):
+        module_key = f'{name}:{m.__class__.__name__}'
+
+        repeats = global_repeats.get(module_key, -1)
+        repeats += 1
+        global_repeats[module_key] = repeats
+        log_key = f'{module_key}:{repeats}'
+        timings[log_key] = time.perf_counter()
         if cu_mem:
-            torch.cuda.empty_cache()
-            torch.cuda.reset_peak_memory_stats()
+            # torch.cuda.empty_cache()
+            # torch.cuda.reset_peak_memory_stats()
             mem_s = torch.cuda.memory_stats()
-            start_mem[f'{name}:{m.__class__.__name__}'] = mem_s
+            mem_stats[log_key] = mem_s
 
-    return log_start
+    def post_hook(m, _m_in, _m_out):
+        return log(m, _m_in)
 
-
-def log_end_builder(name, cu_mem):
-    def log_end(m, _m_in, _m_out):
-        end_times[f'{name}:{m.__class__.__name__}'] = time.perf_counter()
-        # print(name, m.__class__.__name__, 'end', time.perf_counter())
-        if cu_mem:
-            torch.cuda.empty_cache()
-            mem_e = torch.cuda.memory_stats()
-            end_mem[f'{name}:{m.__class__.__name__}'] = mem_e
-
-    return log_end
+    return log if pre_hook else post_hook
 
 
 def profile_model(model, input_ids, runs, cu_mem):
@@ -52,26 +48,47 @@ def profile_model(model, input_ids, runs, cu_mem):
         _ = model(input_ids)  # warmup
     if cu_mem:
         print('profiling cuda memory')
+
+    model_start_timings = dict()
+    model_end_timings = dict()
+    model_start_mem_stats = dict()
+    model_end_mem_stats = dict()
+    global_pre_repeats = dict()
+    global_post_repeats = dict()
+
     for name, module in model.named_modules():
         # print(name, module.__class__.__name__)
-        module.register_forward_pre_hook(log_start_builder(name, cu_mem))
-        module.register_forward_hook(log_end_builder(name, cu_mem))
+        start_logger = log_builder(name, model_start_timings,
+                                   global_pre_repeats, True,
+                                   cu_mem, model_start_mem_stats)
+        module.register_forward_pre_hook(start_logger)
+        end_logger = log_builder(name, model_end_timings,
+                                 global_post_repeats, False,
+                                 cu_mem, model_end_mem_stats)
+        module.register_forward_hook(end_logger)
     for run in range(runs):
+        model_start_timings.clear()
+        model_end_timings.clear()
+        model_start_mem_stats.clear()
+        model_end_mem_stats.clear()
+        global_pre_repeats.clear()
+        global_post_repeats.clear()
         _ = model(input_ids)
-        for k, start in start_times.items():
-            duration = (end_times[k] - start) * 1000
+        for k, start in model_start_timings.items():
+            duration = (model_end_timings[k] - start) * 1000
             start_timings[f'{run}-{k}'] = start
-            end_timings[f'{run}-{k}'] = end_times[k]
-            print(f'{run}-{k}, {duration:.3f} ms, {start}, {end_times[k]}')
+            end_timings[f'{run}-{k}'] = model_end_timings[k]
+            print(f'{run}-{k}, {duration:.3f} ms, '
+                  f'{start}, {model_end_timings[k]}')
             if cu_mem:
-                start_mem_info[f'{run}-{k}'] = start_mem[k]
-                end_mem_info[f'{run}-{k}'] = end_mem[k]
+                start_mem_info[f'{run}-{k}'] = model_start_mem_stats[k]
+                end_mem_info[f'{run}-{k}'] = model_end_mem_stats[k]
                 # print(f'{run}-{k}, {start_mem[k]}, {end_mem[k]}')
     prof_info = json.dumps({'start_timings': start_timings,
                             'end_timings': end_timings,
                             'start_mem_info': start_mem_info,
                             'end_mem_info': end_mem_info,
-                            'keys': list(start_times.keys()),
+                            'keys': list(model_start_timings.keys()),
                             'runs': runs})
     return prof_info
 
@@ -90,7 +107,7 @@ def write_graph_features(features, output_file):
     with open(output_file, mode='w') as f:
         keys = ['name', 'age', 'job', 'city']  # fixme: use real feature names
         writer = csv.DictWriter(f, fieldnames=keys)
-        writer.writeheader()    # add column names in the CSV file
+        writer.writeheader()  # add column names in the CSV file
         for feat in features:
             # todo: design feat format, list of keys
             writer.writerow(feat)
@@ -118,7 +135,7 @@ def main(args):
         print(f'benchmarking {model_name}...')
         config = AutoConfig.from_pretrained(model_name)
         config.torchscript = True
-        model = BertModel(config)
+        model = AutoModel.from_config(config)
         model = model.eval().to(device)
         if args.n_gpu > 1:
             model = torch.nn.DataParallel(model)
