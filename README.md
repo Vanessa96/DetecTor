@@ -5,24 +5,28 @@
 For software methodology
 
 ### Install
-TODO
+
+[pyenv](https://github.com/pyenv/pyenv) and [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+cuda 10.2 cudnn 8.0.3
+
+`pyenv install 3.7.9`
+
+`pyenv virtualenv 3.7.9 nrg`
+
+`pyenv activate nrg`
+
+`pip install -r requirements.txt`
+
+`pyenv deactivate`
 
 ## Usage
 
 ### WattsUp Meter Logger
 
 This is hardware based methodology, it's more accurate and reliable.
+- `pip install pyserial numpy matplotlib PyQt5`
+- plug in the usb to your computer, then `sudo chown $USER /dev/ttyUSB0`
 
-### Install
+- log energy: `python wattsup.py -l -o sample.log`
 
-Tested on Ubuntu
-
-1. create a virtual python3 environment: `virtualenv .env -p python3.7`, then activate it: `source .env/bin/activate`
-2. `pip install pyserial numpy matplotlib`
-3. plug in the usb to your computer, then `sudo chown $USER /dev/ttyUSB0`
-
-### Usage
-
-1. log power: `python wattsup.py -l -o sample.log`
-
-2. plot power and energy (needs to `pip install PyQt5`): `python plot.py sample.log sample.png`
+- plot energy: `python plot.py sample.log sample.png`
