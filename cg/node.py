@@ -166,6 +166,10 @@ if __name__ == '__main__':
         op_node = OpNode(node_id, node_scope, node_op, in_nodes, out_nodes)
         nodes.append(op_node)
     graph = Graph('bert-tiny', nodes, gi_nodes, go_nodes)
+    # TODO:
+    #  - simplify node edges with no data_nodes
+    #  - count op types, op counts for scope, data shape
+    #  - count flops and mem
     # print(graph)
     max_o = 0
     sn = 0
@@ -187,8 +191,8 @@ if __name__ == '__main__':
 
     dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
     scope_nodes = defaultdict(list)  # scope to nodes map
-    import pygtrie
-    scope_trie = pygtrie.StringTrie(separator='.')
+    # import pygtrie
+    # scope_trie = pygtrie.StringTrie(separator='.')
     for node in graph.nodes:
         op = node.op
         scope = node.scope
@@ -215,77 +219,5 @@ if __name__ == '__main__':
                 sg.edge(inp.id, n.id)
         sg.body.append(f'label="{scope}"')
         dot.subgraph(sg)
-
-    # dot_graphs = dict()  # scope to subgraph map
-    # added = set()
-    #
-    # # order matters, use scope_nodes to traverse scope
-    # # longest scope,
-    # for node in graph.nodes:
-    #     scope = node.scope
-    #     if not scope:
-    #         continue
-    #     sub_scopes = scope.split('.')
-    #     num_scopes = len(sub_scopes)
-    #     # create subgraph based on scope depth
-    #     if num_scopes == 1:
-    #         # add last
-    #         if scope not in dot_graphs:
-    #             sg = Digraph('cluster_' + scope)
-    #             print('build nodes and edges', scope)
-    #             for n in scope_nodes[scope]:
-    #                 sg.node(n.id, label=scope + '-' + n.op)
-    #                 for inp in n.inputs:
-    #                     sg.edge(inp.id, n.id)
-    #             sg.body.append(f'label={scope}')
-    #             dot_graphs[scope] = sg
-    #             dot.subgraph(sg)
-    #         else:
-    #             print('skip', scope)
-    #         # sg.body.append('color=lightblue')
-    #     else:  # > 1
-    #         assert num_scopes > 1
-    #         print(sub_scopes)
-    #         for si in range(num_scopes, 0, -1):
-    #             p_scope = '.'.join(sub_scopes[0:si - 1])
-    #             if p_scope not in dot_graphs:
-    #                 p_sg = Digraph('cluster_' + p_scope)
-    #                 print('[parent] build nodes and edges', p_scope)
-    #                 for n in scope_nodes[p_scope]:
-    #                     p_sg.node(n.id, label=p_scope + '-' + n.op)
-    #                     for inp in n.inputs:
-    #                         p_sg.edge(inp.id, n.id)
-    #                 p_sg.body.append(f'label={p_scope}')
-    #                 dot_graphs[p_scope] = p_sg
-    #             else:
-    #                 print('skip [parent]', p_scope)
-    #                 p_sg = dot_graphs[p_scope]
-    #             child_scope = '.'.join(sub_scopes[0:si])
-    #             if child_scope not in dot_graphs:
-    #                 c_sg = Digraph('cluster_' + child_scope)
-    #                 print('[child] build nodes and edges', child_scope)
-    #                 for n in scope_nodes[child_scope]:
-    #                     c_sg.node(n.id, label=child_scope + '-' + n.op)
-    #                     for inp in n.inputs:
-    #                         c_sg.edge(inp.id, n.id)
-    #                 c_sg.body.append(f'label={child_scope}')
-    #                 dot_graphs[child_scope] = c_sg
-    #             else:
-    #                 print('skip [child]', child_scope)
-    #                 c_sg = dot_graphs[child_scope]
-    #             add_id = child_scope + '->' + p_scope
-    #             if add_id not in added:
-    #                 added.add(add_id)
-    #                 p_sg.subgraph(c_sg)
-    #             if si == 2:  # must happen last, create inner subgraph first
-    #                 add_id = p_scope + '->' + 'dot'
-    #                 if add_id not in added:
-    #                     added.add(add_id)
-    #                     dot.subgraph(p_sg)
-    #                     print('add [dot]', add_id)
-    #                 else:
-    #                     print('skip [dot]', add_id)
-    #             # dot_graphs[p_scope].subgraph(dot_graphs[child_scope])
-
     resize_graph(dot)
     dot.render('bert-tiny.gv', view=True)
