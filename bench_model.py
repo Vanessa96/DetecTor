@@ -20,8 +20,8 @@ def log_start_builder(name, cu_mem):
     def log_start(m, _m_in):
         start_times[f'{name}:{m.__class__.__name__}'] = time.perf_counter()
         if cu_mem:
-            # torch.cuda.empty_cache()
-            # torch.cuda.reset_peak_memory_stats()
+            torch.cuda.empty_cache()
+            torch.cuda.reset_peak_memory_stats()
             mem_s = torch.cuda.memory_stats()
             start_mem[f'{name}:{m.__class__.__name__}'] = mem_s
 
@@ -33,7 +33,7 @@ def log_end_builder(name, cu_mem):
         end_times[f'{name}:{m.__class__.__name__}'] = time.perf_counter()
         # print(name, m.__class__.__name__, 'end', time.perf_counter())
         if cu_mem:
-            # torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
             mem_e = torch.cuda.memory_stats()
             end_mem[f'{name}:{m.__class__.__name__}'] = mem_e
 
@@ -93,7 +93,10 @@ def main(args):
                     start_mem_info[f'{run}-{k}'] = start_mem[k]
                     end_mem_info[f'{run}-{k}'] = end_mem[k]
                     # print(f'{run}-{k}, {start_mem[k]}, {end_mem[k]}')
-        timings = json.dumps({'start': start_timings, 'end': end_timings,
+        timings = json.dumps({'start_timings': start_timings,
+                              'end_timings': end_timings,
+                              'start_mem_info': start_mem_info,
+                              'end_mem_info': end_mem_info,
                               'keys': list(start_times.keys()),
                               'runs': args.runs})
         timings_file.write_text(timings)
