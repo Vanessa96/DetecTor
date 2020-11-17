@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from collections import defaultdict
+__author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
+
 from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
+from typing import List
 
 from transformers import AutoConfig
 
@@ -14,17 +16,18 @@ class OpNode:
     id: str  # use output node debugName
     scope: str  # scope + id
     op: str  # operation type: matmul, add, mul, div, etc.
-    inputs: list[DataNode]
-    outputs: list[DataNode]
+    inputs: List[DataNode]
+    outputs: List[DataNode]
     # attr: dict[str, Any] = field(default_factory=dict)  # extra information
-    # flops: int = 0  # number of operations
+    flops: int = 0  # number of operations
+    mem_bytes: int = 0  # bytes of mem reads and writes
 
 
 @dataclass
 class DataNode:
     id: str
     dtype: str
-    shape: list[int]  # tensor shape
+    shape: List[int]  # tensor shape
     # params: bool = False  # flattened array weights
     # attr: dict[str, Any] = field(default_factory=dict)  # extra information
     # mem_read_bytes: int = 0  # amount of data read from input nodes
@@ -34,88 +37,27 @@ class DataNode:
 @dataclass
 class Module:
     id: str  # scope + id
-    nodes: list[OpNode]
+    nodes: List[OpNode]
 
 
 @dataclass
 class Graph:
     name: str
-    nodes: list[OpNode]
-    inputs: list[DataNode]
-    outputs: list[DataNode]
+    nodes: List[OpNode]
+    inputs: List[DataNode]
+    outputs: List[DataNode]
     # attr: dict[str, Any] = field(default_factory=dict)  # extra information
 
 
-from torch import nn
-
-
-class LinearModel(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
-
-    def forward(self, x):
-        y = self.dense(x)
-        return y
-
-
-# from transformers.activations import ACT2FN
-
-# class BertIntermediate(nn.Module):
-#     def __init__(self, config):
-#         super().__init__()
-#         self.dense = nn.Linear(config.hidden_size, config.intermediate_size)
-#         if isinstance(config.hidden_act, str):
-#             self.intermediate_act_fn = ACT2FN[config.hidden_act]
-#         else:
-#             self.intermediate_act_fn = config.hidden_act
-#
-#     def forward(self, hidden_states):
-#         hidden_states = self.dense(hidden_states)
-#         hidden_states = self.intermediate_act_fn(hidden_states)
-#         return hidden_states
-def resize_graph(dot, size_per_element=0.15, min_size=12):
-    """Resize the graph according to how much content it contains.
-    Modify the graph in place.
-    """
-    # Get the approximate number of nodes and edges
-    num_rows = len(dot.body)
-    content_size = num_rows * size_per_element
-    size = max(min_size, content_size)
-    size_str = str(size) + "," + str(size)
-    dot.graph_attr.update(size=size_str)
-
-
-if __name__ == '__main__':
-    import torch
-    from transformers import BertModel
-    from graphviz import Digraph
-
-    # from transformers.modeling_bert import BertIntermediate
-
-    config = AutoConfig.from_pretrained("prajjwal1/bert-tiny")
-    config.hidden_act = 'gelu_fast'
-    config.torchscript = True
-    model = BertModel(config)
-    inputs = torch.randint(1000, size=(1, 100)).long()
-    trace = torch.jit.trace(model, inputs)
-    # torch.jit.save(trace, "traced_bert-tiny.pt")
-
-    fc_graph = trace.inlined_graph
-    # fc_model = BertIntermediate(config)
-    # fc_model = LinearModel(config)
-    # input_len = 32
-    # input_states = torch.rand((input_len, config.hidden_size))
-    # fc_trace = torch.jit.trace(fc_model, (input_states,))
-    # fc_graph = fc_trace.inlined_graph
-    fc_input_nodes = {i.debugName(): i for i in fc_graph.inputs()}
-    fc_output_nodes = {i.debugName(): i for i in fc_graph.outputs()}
+def construct_graph(trace_graph, name):
+    # fc_input_nodes = {i.debugName(): i for i in trace_graph.inputs()}
+    # fc_output_nodes = {i.debugName(): i for i in trace_graph.outputs()}
     data_nodes = dict()
     nodes = []
     gi_nodes = []
     go_nodes = []
     ops = set()
-    for i, io_node in enumerate(fc_graph.inputs()):
+    for i, io_node in enumerate(trace_graph.inputs()):
         name = io_node.debugName()
         node_type = io_node.type()
         if isinstance(io_node.type(), torch.TensorType):
@@ -127,7 +69,7 @@ if __name__ == '__main__':
         gi_nodes.append(ni_node)
         data_nodes[name] = ni_node
 
-    for n in fc_graph.nodes():
+    for n in trace_graph.nodes():
         node_inputs = list(n.inputs())
         node_outputs = list(n.outputs())
         node_id = node_outputs[0].debugName()
@@ -165,7 +107,39 @@ if __name__ == '__main__':
             data_nodes[name] = out_node
         op_node = OpNode(node_id, node_scope, node_op, in_nodes, out_nodes)
         nodes.append(op_node)
-    graph = Graph('bert-tiny', nodes, gi_nodes, go_nodes)
+    graph = Graph(name, nodes, gi_nodes, go_nodes)
+    return graph, ops
+
+
+def resize_graph(dot, size_per_element=0.15, min_size=12):
+    """Resize the graph according to how much content it contains.
+    Modify the graph in place.
+    """
+    # Get the approximate number of nodes and edges
+    num_rows = len(dot.body)
+    content_size = num_rows * size_per_element
+    size = max(min_size, content_size)
+    size_str = str(size) + "," + str(size)
+    dot.graph_attr.update(size=size_str)
+
+
+if __name__ == '__main__':
+    import torch
+    from transformers import BertModel
+
+    # from transformers.modeling_bert import BertIntermediate
+    model_name = "prajjwal1/bert-tiny"
+    config = AutoConfig.from_pretrained(model_name)
+    config.hidden_act = 'gelu_fast'
+    config.torchscript = True
+    model = BertModel(config)
+    inputs = torch.randint(1000, size=(1, 100)).long()
+    trace = torch.jit.trace(model, inputs)
+    # torch.jit.save(trace, "traced_bert-tiny.pt")
+
+    fc_graph = trace.inlined_graph
+    graph, graph_ops = construct_graph(fc_graph, model_name)
+
     # TODO:
     #  - simplify node edges with no data_nodes
     #  - count op types, op counts for scope, data shape
@@ -180,44 +154,44 @@ if __name__ == '__main__':
         if n.scope:
             sn += 1
             print(i, n.scope)
-    print(ops, max_o, sn, tn)
+    print({k: k.replace("::", "_") for k in sorted(graph_ops)}, max_o, sn, tn)
 
-    node_attr = dict(style='filled',
-                     shape='box',
-                     align='left',
-                     fontsize='12',
-                     ranksep='0.1',
-                     height='0.2')
-
-    dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
-    scope_nodes = defaultdict(list)  # scope to nodes map
-    # import pygtrie
-    # scope_trie = pygtrie.StringTrie(separator='.')
-    for node in graph.nodes:
-        op = node.op
-        scope = node.scope
-        if not scope:
-            # no scope nodes belong to the root graph
-            dot.node(node.id, label=op)
-            for inp in node.inputs:
-                dot.edge(inp.id, node.id)
-        else:
-            # if scope_trie.has_key(scope):
-            #     scope_nodes = scope_trie[scope]
-            #     scope_nodes.append(node)
-            #     scope_trie[scope] = scope_nodes
-            # else:
-            #     scope_trie[scope] = [node]
-            # scope_trie[scope]
-            scope_nodes[scope].append(node)
-    for scope, nodes in scope_nodes.items():
-        sg = Digraph('cluster_' + scope)
-        print('build nodes and edges', scope)
-        for n in nodes:
-            sg.node(n.id, label=scope + '-' + n.op)
-            for inp in n.inputs:
-                sg.edge(inp.id, n.id)
-        sg.body.append(f'label="{scope}"')
-        dot.subgraph(sg)
-    resize_graph(dot)
-    dot.render('bert-tiny.gv', view=True)
+    # node_attr = dict(style='filled',
+    #                  shape='box',
+    #                  align='left',
+    #                  fontsize='12',
+    #                  ranksep='0.1',
+    #                  height='0.2')
+    # from graphviz import Digraph
+    # dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
+    # scope_nodes = defaultdict(list)  # scope to nodes map
+    # # import pygtrie
+    # # scope_trie = pygtrie.StringTrie(separator='.')
+    # for node in graph.nodes:
+    #     op = node.op
+    #     scope = node.scope
+    #     if not scope:
+    #         # no scope nodes belong to the root graph
+    #         dot.node(node.id, label=op)
+    #         for inp in node.inputs:
+    #             dot.edge(inp.id, node.id)
+    #     else:
+    #         # if scope_trie.has_key(scope):
+    #         #     scope_nodes = scope_trie[scope]
+    #         #     scope_nodes.append(node)
+    #         #     scope_trie[scope] = scope_nodes
+    #         # else:
+    #         #     scope_trie[scope] = [node]
+    #         # scope_trie[scope]
+    #         scope_nodes[scope].append(node)
+    # for scope, nodes in scope_nodes.items():
+    #     sg = Digraph('cluster_' + scope)
+    #     print('build nodes and edges', scope)
+    #     for n in nodes:
+    #         sg.node(n.id, label=scope + '-' + n.op)
+    #         for inp in n.inputs:
+    #             sg.edge(inp.id, n.id)
+    #     sg.body.append(f'label="{scope}"')
+    #     dot.subgraph(sg)
+    # resize_graph(dot)
+    # dot.render('bert-tiny.gv', view=True)
