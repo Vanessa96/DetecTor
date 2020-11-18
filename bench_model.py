@@ -99,7 +99,7 @@ def profile_model(model, input_ids, runs, cu_mem):
 def analyze_aggregation_graph(trace_graph, model_name):
     graph_features = list()
     # todo: import cg/node, construct graph with flops features
-    graph, ops = construct_aggregation_graph(trace_graph, model_name)
+    graph, op_data_types = construct_aggregation_graph(trace_graph, model_name)
     scope_nodes = defaultdict(list)  # scope to nodes map
     for node in graph.nodes:
         scope = node.scope
@@ -107,7 +107,7 @@ def analyze_aggregation_graph(trace_graph, model_name):
     for scope, nodes in scope_nodes.items():
         # todo: design feature format
         graph_features.append({'scope': scope, })
-    return graph_features, graph, ops
+    return graph_features, graph, op_data_types
 
 
 def write_graph_features(features, output_file):
@@ -141,7 +141,7 @@ def main(args):
     #                              device=device)
     # pos_ids = torch.arange(config.max_position_embeddings,
     #                        device=device).expand((1, -1))[:, :seq_len]
-    all_ops = set()
+    all_op_data_types = set()
     for model_name in args.models:
         print(f'benchmarking {model_name}...')
         config = AutoConfig.from_pretrained(model_name)
@@ -173,16 +173,19 @@ def main(args):
                 # inputs['decoder_input_ids'] = input_ids
             trace = torch.jit.trace(model, inputs)
             graph = trace.inlined_graph
+            # torch._C._jit_pass_inline(graph)
+            # torch._C._jit_pass_lint(graph)
+            # torch._C._jit_pass_erase_number_types(graph)
             cg_file.write_text(str(graph))
             graph_features, aggregation_graph, ops = analyze_aggregation_graph(
                 graph, model_name)
             aggregation_graph_file.write_text(str(aggregation_graph))
-            all_ops.update(ops)
+            all_op_data_types.update(ops)
             cg_features_file = out_dir.joinpath(f'{model_name}_features.csv')
             write_graph_features(graph_features, cg_features_file)
         print(f'{model_name} done.')
     print('all done.')
-    print(sorted(all_ops))
+    print(sorted(all_op_data_types))
 
 
 if __name__ == "__main__":

@@ -98,6 +98,22 @@ op_counters = {
 }
 
 
+def _dtype_to_bytes(dtype):
+    dtype = dtype.lower()
+    if dtype in {"uint8", "int8", "byte", "char", 'bool'}:
+        return 1
+    elif dtype in {"float16", "half", "int16", "short"}:
+        return 2
+    elif dtype in {"float32", "float", "int32", "int"}:
+        return 4
+    elif dtype in {"int64", "long", "float64", "double"}:
+        return 8
+    elif dtype in {'none'}:
+        return 0
+    # handle List[int], Device
+    raise TypeError(f"unknown data type: {dtype}")
+
+
 def count_flops_io(node):
     op_func = globals().get(op_counters[node.op], None)
     if op_func is None:
@@ -118,10 +134,11 @@ def aten_addmm(node):  # also for conv1d in huggingface lib
     return n * m * p
 
 
-# should also consider broadcasting
+# should also consider broadcasting, use output nodes only
 def aten_elementwise(node):
     # todo: abs, add, add_, div, mul, mul_, rsub, sub
-    pass
+    out_shape = node.outputs[0].shape
+    return math.prod(out_shape)
 
 
 aten_abs = aten_elementwise
@@ -135,11 +152,6 @@ aten_sub = aten_elementwise
 
 
 def aten_layer_norm(node):
-    os = node.outputs[0].shape
-    return math.prod(os)
-
-
-def aten_mul(node):
     os = node.outputs[0].shape
     return math.prod(os)
 

@@ -73,6 +73,29 @@ class Graph:
                 f')\n')
 
 
+def _process_data_nodes(node_inputs, data_nodes):
+    # ListType
+    data_types = set()
+    in_nodes = []
+    for ni in node_inputs:
+        name = ni.debugName()
+        node_type = ni.type()
+        data_types.add(str(node_type))
+        if isinstance(node_type, torch.TensorType):
+            dtype = ni.type().scalarType()  # Float
+            shape = ni.type().sizes()  # list of int
+            # check how to detect if this is a parameter data node
+        else:
+            # for types like int, int[], Long(), Device, bool, None
+            # most of them are functional args, no special handling
+            dtype = str(node_type)
+            shape = []
+        ni_node = data_nodes.get(name, DataNode(name, dtype, shape))
+        in_nodes.append(ni_node)
+        data_nodes[name] = ni_node
+    return in_nodes, data_types
+
+
 def construct_aggregation_graph(trace_graph, model_name):
     # fc_input_nodes = {i.debugName(): i for i in trace_graph.inputs()}
     # fc_output_nodes = {i.debugName(): i for i in trace_graph.outputs()}
@@ -80,8 +103,8 @@ def construct_aggregation_graph(trace_graph, model_name):
     nodes = []
     gi_nodes = []
     go_nodes = []
-    ops = set()
-    for i, io_node in enumerate(trace_graph.inputs()):
+    op_data_types = set()
+    for io_node in trace_graph.inputs():
         name = io_node.debugName()
         node_type = io_node.type()
         if isinstance(io_node.type(), torch.TensorType):
@@ -93,46 +116,21 @@ def construct_aggregation_graph(trace_graph, model_name):
         gi_nodes.append(ni_node)
         data_nodes[name] = ni_node
 
-    for n in trace_graph.nodes():
-        node_inputs = list(n.inputs())
-        node_outputs = list(n.outputs())
+    for node in trace_graph.nodes():
+        node_inputs = list(node.inputs())
+        node_outputs = list(node.outputs())
         node_id = node_outputs[0].debugName()
-        node_scope = n.scopeName().replace('__module.', '').split('/')[-1]
-        node_op = n.kind()
-        ops.add(node_op)
-        in_nodes = []
-        for ni in node_inputs:
-            name = ni.debugName()
-            node_type = ni.type()
-            if isinstance(node_type, torch.TensorType):
-                dtype = ni.type().scalarType()  # Float
-                shape = ni.type().sizes()  # list of int
-                # TODO: check how to detect if this is a parameter data node
-            else:
-                # need to handle int, int[], Long(), Device, bool, None
-                dtype = node_type
-                shape = []
-            ni_node = data_nodes.get(name, DataNode(name, dtype, shape))
-            in_nodes.append(ni_node)
-            data_nodes[name] = ni_node
-        out_nodes = []
-        for node_out in node_outputs:
-            name = node_out.debugName()
-            node_type = node_out.type()
-            if isinstance(node_type, torch.TensorType):
-                dtype = node_out.type().scalarType()  # Float
-                shape = node_out.type().sizes()  # list of int
-            else:
-                # need to handle int, int[], Long(), Device, bool, None
-                dtype = node_type
-                shape = []
-            out_node = data_nodes.get(name, DataNode(name, dtype, shape))
-            out_nodes.append(out_node)
-            data_nodes[name] = out_node
+        node_scope = node.scopeName().replace('__module.', '').split('/')[-1]
+        node_op = node.kind()
+        # ops.add(node_op)
+        in_nodes, in_dtypes = _process_data_nodes(node_inputs, data_nodes)
+        out_nodes, out_dtypes = _process_data_nodes(node_outputs, data_nodes)
+        op_data_types.update(in_dtypes)
+        op_data_types.update(out_dtypes)
         op_node = OpNode(node_id, node_op, node_scope, in_nodes, out_nodes)
         nodes.append(op_node)
     # todo: handle return node to make it go_node
-    return Graph(model_name, nodes, gi_nodes, go_nodes), ops
+    return Graph(model_name, nodes, gi_nodes, go_nodes), op_data_types
 
 
 def resize_graph(dot, size_per_element=0.15, min_size=12):
