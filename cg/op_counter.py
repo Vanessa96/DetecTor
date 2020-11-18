@@ -17,7 +17,6 @@ https://github.com/facebookresearch/fvcore/blob/master/fvcore/nn/jit_handles.py
 
 import math
 
-
 # ops marked with # p1 are implemented
 # ops marked with # only are planned with low priority
 op_counters = {
@@ -89,12 +88,12 @@ op_counters = {
     'aten::where': 'aten_where',  #
     'aten::zeros': 'aten_zeros',  #
     'aten::zeros_like': 'aten_zeros_like',  #
-    'prim::Constant': 'prim_Constant',
+    'prim::Constant': 'prim_Constant',  # need unpacking
     'prim::GetAttr': 'prim_GetAttr',
-    'prim::ListConstruct': 'prim_ListConstruct',
+    'prim::ListConstruct': 'prim_ListConstruct',  # need unpacking
     'prim::ListUnpack': 'prim_ListUnpack',
     'prim::NumToTensor': 'prim_NumToTensor',
-    'prim::TupleConstruct': 'prim_TupleConstruct',
+    'prim::TupleConstruct': 'prim_TupleConstruct',  # need unpacking
     'prim::TupleUnpack': 'prim_TupleUnpack',
 }
 
@@ -119,9 +118,20 @@ def aten_addmm(node):  # also for conv1d in huggingface lib
     return n * m * p
 
 
+# should also consider broadcasting
 def aten_elementwise(node):
-    # todo: add, add_, div, mul, rsub
+    # todo: abs, add, add_, div, mul, mul_, rsub, sub
     pass
+
+
+aten_abs = aten_elementwise
+aten_add = aten_elementwise
+aten_add_ = aten_elementwise
+aten_div = aten_elementwise
+aten_mul = aten_elementwise
+aten_mul_ = aten_elementwise
+aten_rsub = aten_elementwise
+aten_sub = aten_elementwise
 
 
 def aten_layer_norm(node):

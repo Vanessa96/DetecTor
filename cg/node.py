@@ -14,13 +14,26 @@ from transformers import AutoConfig
 class OpNode:
     # op: str
     id: str  # use output node debugName
-    scope: str  # scope + id
     op: str  # operation type: matmul, add, mul, div, etc.
+    scope: str  # scope + id
     inputs: List[DataNode]
     outputs: List[DataNode]
     # attr: dict[str, Any] = field(default_factory=dict)  # extra information
     flops: int = 0  # number of operations
     mem_bytes: int = 0  # bytes of mem reads and writes
+
+    def __repr__(self):
+        in_str = "\n\t\t\t\t".join(str(in_node) for in_node in self.inputs)
+        f_in_str = f'\t\t\tinputs=[\n\t\t\t\t{in_str}],\n' if self.inputs else ''
+        out_str = "\n\t\t\t\t".join(str(out_node) for out_node in self.outputs)
+        f_out_str = f'\t\t\toutputs=[\n\t\t\t\t{out_str}],' if self.outputs else ''
+        flops_str = f'flops={self.flops}, ' if self.flops else ''
+        mem_str = f'mem_bytes={self.mem_bytes}, ' if self.mem_bytes else ''
+        scope_str = f'scope={self.scope}, ' if self.scope else ''
+        return (f'\t\t{self.__class__.__name__}(id={self.id}, op={self.op}, '
+                f'{flops_str}{mem_str}{scope_str}\n'
+                f'{f_in_str}{f_out_str}'
+                f')')
 
 
 @dataclass
@@ -46,10 +59,21 @@ class Graph:
     nodes: List[OpNode]
     inputs: List[DataNode]
     outputs: List[DataNode]
+
     # attr: dict[str, Any] = field(default_factory=dict)  # extra information
+    def __repr__(self):
+        inputs_str = "\n\t\t".join(str(in_node) for in_node in self.inputs)
+        in_str = f'\tinputs=[\n\t\t{inputs_str}],\n' if self.inputs else ''
+        outputs_str = "\n\t\t".join(str(out_node) for out_node in self.outputs)
+        o_str = f'\toutputs=[\n\t\t{outputs_str}],\n' if self.outputs else ''
+        nodes_str = "\n".join(str(node) for node in self.nodes)
+        n_str = f'\tnodes=[\n{nodes_str}],\n' if self.nodes else ''
+        return (f'{self.__class__.__name__}(name={self.name},\n'
+                f'{in_str}{o_str}{n_str}'
+                f')\n')
 
 
-def construct_aggregation_graph(trace_graph, name):
+def construct_aggregation_graph(trace_graph, model_name):
     # fc_input_nodes = {i.debugName(): i for i in trace_graph.inputs()}
     # fc_output_nodes = {i.debugName(): i for i in trace_graph.outputs()}
     data_nodes = dict()
@@ -105,10 +129,10 @@ def construct_aggregation_graph(trace_graph, name):
             out_node = data_nodes.get(name, DataNode(name, dtype, shape))
             out_nodes.append(out_node)
             data_nodes[name] = out_node
-        op_node = OpNode(node_id, node_scope, node_op, in_nodes, out_nodes)
+        op_node = OpNode(node_id, node_op, node_scope, in_nodes, out_nodes)
         nodes.append(op_node)
-    graph = Graph(name, nodes, gi_nodes, go_nodes)
-    return graph, ops
+    # todo: handle return node to make it go_node
+    return Graph(model_name, nodes, gi_nodes, go_nodes), ops
 
 
 def resize_graph(dot, size_per_element=0.15, min_size=12):
