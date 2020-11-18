@@ -81,9 +81,8 @@ def profile_model(model, input_ids, runs, cu_mem):
             duration = (model_end_timings[k] - start) * 1000
             start_timings[f'{run}-{k}'] = start
             end_timings[f'{run}-{k}'] = model_end_timings[k]
-            if duration > 0.1:
-                print(f'{run}-{k}, {duration:.3f} ms, '
-                      f'{start}, {model_end_timings[k]}')
+            print(f'{run}-{k}, {duration:.3f} ms, '
+                  f'{start}, {model_end_timings[k]}')
             if cu_mem:
                 start_mem_info[f'{run}-{k}'] = model_start_mem_stats[k]
                 end_mem_info[f'{run}-{k}'] = model_end_mem_stats[k]
