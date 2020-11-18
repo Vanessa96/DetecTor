@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-__author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
+
+"""
+FLOPS tutorial (slide 4):
+https://www.stat.cmu.edu/~ryantibs/convexopt-F18/lectures/num-lin-alg.pdf
+
+approximate flops for measuring algorithm complexity is still very useful,
+but for energy estimation features, the more accurate the better.
+
+reference implementations:
+https://github.com/zhijian-liu/torchprofile/blob/master/torchprofile/handlers.py
+https://github.com/Swall0w/torchstat/blob/master/torchstat/compute_flops.py
+https://github.com/adityaiitb/pyprof2/blob/master/pyprof2/prof/
+https://github.com/facebookresearch/fvcore/blob/master/fvcore/nn/jit_handles.py
+"""
 
 import math
 
@@ -46,15 +59,27 @@ def count_flops_io(node):
         return op_func(node)
 
 
-def aten_addmm(node):
+def aten_activation(node):
+    # todo: linear, relu, tanh, sigmoid, gelu, mish, swish, silu
+    pass
+
+
+def aten_addmm(node):  # also for conv1d in huggingface lib
     # [n, p] = aten::addmm([n, p], [n, m], [m, p], *, *)
     n, m = node.inputs[1].shape
     m, p = node.inputs[2].shape
     return n * m * p
 
+
+def aten_elementwise(node):
+    # todo: add, add_, div, mul, rsub
+    pass
+
+
 def aten_layer_norm(node):
     os = node.outputs[0].shape
     return math.prod(os)
+
 
 def aten_mul(node):
     os = node.outputs[0].shape
@@ -93,3 +118,11 @@ def aten_matmul(node):
         *_, n, m = node.inputs[0].shape
         *_, m, p = node.inputs[1].shape
         return math.prod(b) * n * m * p
+
+
+def aten_softmax(node):
+    """ DxVx2 from the NeurIPS 2018 paper below
+    "Navigating with graph representations for fast and scalable decoding of neural language models."
+    """
+    # todo:
+    pass
