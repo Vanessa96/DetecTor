@@ -39,13 +39,14 @@ def log_builder(name, timings, global_repeats, pre_hook,
     return log if pre_hook else post_hook
 
 
-def profile_model(model, input_ids, runs, cu_mem):
+def profile_model(model, input_ids, runs, cu_mem, seq2seq=False):
     start_timings = dict()
     end_timings = dict()
     start_mem_info = dict()
     end_mem_info = dict()
+    kwargs = {'decoder_input_ids': input_ids} if seq2seq else {}
     for _ in range(3):
-        _ = model(input_ids)  # warmup
+        _ = model(input_ids, **kwargs)  # warmup
     if cu_mem:
         print('profiling cuda memory')
 
@@ -73,7 +74,7 @@ def profile_model(model, input_ids, runs, cu_mem):
         model_end_mem_stats.clear()
         global_pre_repeats.clear()
         global_post_repeats.clear()
-        _ = model(input_ids)
+        _ = model(input_ids, **kwargs)
         for k, start in model_start_timings.items():
             duration = (model_end_timings[k] - start) * 1000
             start_timings[f'{run}-{k}'] = start
@@ -113,6 +114,11 @@ def write_graph_features(features, output_file):
             writer.writerow(feat)
 
 
+def sanitize(model_name):
+    # todo: more robust name sanitization
+    return model_name.replace('/', '_')
+
+
 def main(args):
     # model_name = '"prajjwal1/bert-tiny"'
     # model_name = 'bert-base-uncased'
@@ -141,11 +147,13 @@ def main(args):
             model = torch.nn.DataParallel(model)
         cu_mem = args.cuda_memory
         profile = args.profile
+        seq2seq = args.seq2seq
+        model_name = sanitize(model_name)
         if profile:
             runs = args.runs
             file_prefix = f'{model_name}_r{runs}_b{bs}_i{seq_len}'
             prof_info_file = out_dir.joinpath(f'{file_prefix}_timings.json')
-            prof_info = profile_model(model, input_ids, runs, cu_mem)
+            prof_info = profile_model(model, input_ids, runs, cu_mem, seq2seq)
             prof_info_file.write_text(prof_info)
         else:  # jit trace to get the graph statistics like flops, mem_bytes
             file_prefix = f'{model_name}_b{bs}_i{seq_len}'
@@ -179,8 +187,10 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--models", type=str, nargs='+',
                         help="list of model strings supported by the "
                              "HuggingFace Transformers library")
+    parser.add_argument("-ss", "--seq2seq", action="store_true",
+                        help="seq2seq model or not")
     parser.add_argument("-ng", "--n_gpu", type=int, default=1,
                         help="output dir")
-    parser.add_argument("--no_cuda", action="store_true",
+    parser.add_argument("-nc", "--no_cuda", action="store_true",
                         help="Whether not to use CUDA when available")
     main(parser.parse_args())
