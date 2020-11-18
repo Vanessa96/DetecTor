@@ -138,7 +138,7 @@ if __name__ == '__main__':
     # torch.jit.save(trace, "traced_bert-tiny.pt")
 
     fc_graph = trace.inlined_graph
-    graph, graph_ops = construct_graph(fc_graph, model_name)
+    graph, graph_ops = construct_aggregation_graph(fc_graph, model_name)
 
     # TODO:
     #  - simplify node edges with no data_nodes
