@@ -40,11 +40,12 @@ def log_builder(name, timings, global_repeats, pre_hook,
     return log if pre_hook else post_hook
 
 
-def profile_model(model, input_ids, runs, cu_mem, seq2seq=False):
+def profile_model(model, input_ids, runs, cu_mem):
     start_timings = dict()
     end_timings = dict()
     start_mem_info = dict()
     end_mem_info = dict()
+    seq2seq = hasattr(model, 'decoder')
     kwargs = {'decoder_input_ids': input_ids} if seq2seq else {}
     for _ in range(3):
         _ = model(input_ids, **kwargs)  # warmup
@@ -157,12 +158,19 @@ def main(args):
             runs = args.runs
             file_prefix = f'{model_name}_r{runs}_b{bs}_i{seq_len}'
             prof_info_file = out_dir.joinpath(f'{file_prefix}_timings.json')
-            prof_info = profile_model(model, input_ids, runs, cu_mem, seq2seq)
+            prof_info = profile_model(model, input_ids, runs, cu_mem)
             prof_info_file.write_text(prof_info)
         else:  # jit trace to get the graph statistics like flops, mem_bytes
             file_prefix = f'{model_name}_b{bs}_i{seq_len}'
             cg_file = out_dir.joinpath(f'{file_prefix}_cg.txt')
-            trace = torch.jit.trace(model, input_ids)
+            # inputs = {'input_ids': input_ids}
+            inputs = (input_ids,)
+            if hasattr(model, 'decoder'):
+                #  attention_mask=None, decoder_input_ids=None
+                inputs += (input_ids, input_ids)
+                # inputs['attention_mask'] = input_ids
+                # inputs['decoder_input_ids'] = input_ids
+            trace = torch.jit.trace(model, inputs)
             graph = trace.inlined_graph
             cg_file.write_text(str(graph))
             graph_features, ops = analyze_aggregation_graph(graph, model_name)
@@ -171,7 +179,7 @@ def main(args):
             write_graph_features(graph_features, cg_features_file)
         print(f'{model_name} done.')
     print('all done.')
-    print(all_ops)
+    print(sorted(all_ops))
 
 
 if __name__ == "__main__":
