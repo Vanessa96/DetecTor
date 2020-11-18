@@ -107,7 +107,7 @@ def analyze_aggregation_graph(trace_graph, model_name):
     for scope, nodes in scope_nodes.items():
         # todo: design feature format
         graph_features.append({'scope': scope, })
-    return graph_features, ops
+    return graph_features, graph, ops
 
 
 def write_graph_features(features, output_file):
@@ -162,8 +162,10 @@ def main(args):
         else:  # jit trace to get the graph statistics like flops, mem_bytes
             file_prefix = f'{model_name}_b{bs}_i{seq_len}'
             cg_file = out_dir.joinpath(f'{file_prefix}_cg.txt')
+            aggregation_graph_file = out_dir.joinpath(f'{file_prefix}_agg.txt')
             # inputs = {'input_ids': input_ids}
             inputs = (input_ids,)
+            # fixme: should use the generate method call
             if config.model_type == 't5':
                 #  attention_mask=None, decoder_input_ids=None
                 inputs += (input_ids, input_ids)
@@ -172,7 +174,9 @@ def main(args):
             trace = torch.jit.trace(model, inputs)
             graph = trace.inlined_graph
             cg_file.write_text(str(graph))
-            graph_features, ops = analyze_aggregation_graph(graph, model_name)
+            graph_features, aggregation_graph, ops = analyze_aggregation_graph(
+                graph, model_name)
+            aggregation_graph_file.write_text(str(aggregation_graph))
             all_ops.update(ops)
             cg_features_file = out_dir.joinpath(f'{model_name}_features.csv')
             write_graph_features(graph_features, cg_features_file)
