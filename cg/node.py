@@ -49,7 +49,7 @@ class Graph:
     # attr: dict[str, Any] = field(default_factory=dict)  # extra information
 
 
-def construct_graph(trace_graph, name):
+def construct_aggregation_graph(trace_graph, name):
     # fc_input_nodes = {i.debugName(): i for i in trace_graph.inputs()}
     # fc_output_nodes = {i.debugName(): i for i in trace_graph.outputs()}
     data_nodes = dict()

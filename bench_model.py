@@ -6,12 +6,13 @@ import csv
 import time
 import argparse
 import json
+from collections import defaultdict
 from pathlib import Path
 import torch
 from transformers import AutoModel
 from transformers import AutoConfig
 
-from cg.node import construct_graph
+from cg.node import construct_aggregation_graph
 
 
 def log_builder(name, timings, global_repeats, pre_hook,
@@ -94,23 +95,25 @@ def profile_model(model, input_ids, runs, cu_mem, seq2seq=False):
     return prof_info
 
 
-def analyze_model(trace_graph, model_name):
-    graph_features = dict()
+def analyze_aggregation_graph(trace_graph, model_name):
+    graph_features = list()
     # todo: import cg/node, construct graph with flops features
-    graph, ops = construct_graph(trace_graph, model_name)
-    for n in graph.nodes:
+    graph, ops = construct_aggregation_graph(trace_graph, model_name)
+    scope_nodes = defaultdict(list)  # scope to nodes map
+    for node in graph.nodes:
+        scope = node.scope
+        scope_nodes[scope].append(node)
+    for scope, nodes in scope_nodes.items():
         # todo: design feature format
-        graph_features[n.scope] = n.op
-    return graph_features
+        graph_features.append({'scope': scope, })
+    return graph_features, ops
 
 
 def write_graph_features(features, output_file):
     with open(output_file, mode='w') as f:
-        keys = ['name', 'age', 'job', 'city']  # fixme: use real feature names
-        writer = csv.DictWriter(f, fieldnames=keys)
-        writer.writeheader()  # add column names in the CSV file
+        writer = csv.DictWriter(f, fieldnames=features[0].keys())
+        writer.writeheader()
         for feat in features:
-            # todo: design feat format, list of keys
             writer.writerow(feat)
 
 
@@ -137,6 +140,7 @@ def main(args):
     #                              device=device)
     # pos_ids = torch.arange(config.max_position_embeddings,
     #                        device=device).expand((1, -1))[:, :seq_len]
+    all_ops = set()
     for model_name in args.models:
         print(f'benchmarking {model_name}...')
         config = AutoConfig.from_pretrained(model_name)
@@ -161,11 +165,13 @@ def main(args):
             trace = torch.jit.trace(model, input_ids)
             graph = trace.inlined_graph
             cg_file.write_text(str(graph))
-            graph_features = analyze_model(graph, model_name)
+            graph_features, ops = analyze_aggregation_graph(graph, model_name)
+            all_ops.update(ops)
             cg_features_file = out_dir.joinpath(f'{model_name}_features.csv')
             write_graph_features(graph_features, cg_features_file)
         print(f'{model_name} done.')
     print('all done.')
+    print(all_ops)
 
 
 if __name__ == "__main__":
