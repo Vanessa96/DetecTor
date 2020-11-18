@@ -165,7 +165,7 @@ def main(args):
             cg_file = out_dir.joinpath(f'{file_prefix}_cg.txt')
             # inputs = {'input_ids': input_ids}
             inputs = (input_ids,)
-            if hasattr(model, 'decoder'):
+            if config.model_type == 't5':
                 #  attention_mask=None, decoder_input_ids=None
                 inputs += (input_ids, input_ids)
                 # inputs['attention_mask'] = input_ids
