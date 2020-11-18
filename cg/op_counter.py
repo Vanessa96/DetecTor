@@ -19,6 +19,8 @@ import math
 
 # ops marked with # p1 are implemented
 # ops marked with # only are planned with low priority
+import warnings
+
 op_counters = {
     'aten::Int': 'aten_Int',
     'aten::ScalarImplicit': 'aten_ScalarImplicit',
@@ -110,8 +112,10 @@ def _dtype_to_bytes(dtype):
         return 8
     elif dtype in {'none'}:
         return 0
-    # handle List[int], Device
-    raise TypeError(f"unknown data type: {dtype}")
+    else:
+        warnings.warn(f"unknown data type (will return 0): {dtype}!")
+        # handle List[int], Device
+        return 0
 
 
 def count_flops_io(node):
