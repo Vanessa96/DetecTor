@@ -46,9 +46,15 @@ class DataNode:
     dtype: str
     shape: List[int]  # tensor shape
     extra: Dict[str, Any] = field(default_factory=dict)  # extra information
+
     # params: bool = False  # flattened array weights
     # mem_read_bytes: int = 0  # amount of data read from input nodes
     # mem_write_bytes: int = 0  # amount of data written to output nodes
+    def __repr__(self):
+        shape_str = f', shape={self.shape}' if self.shape else ''
+        extra_str = f', extra={self.extra}' if self.extra else ''
+        return (f'{self.__class__.__name__}(id={self.id}, dtype={self.dtype}'
+                f'{shape_str}{extra_str})')
 
 
 @dataclass
@@ -71,7 +77,7 @@ class Graph:
         outputs_str = "\n\t\t".join(str(out_node) for out_node in self.outputs)
         o_str = f'\toutputs=[\n\t\t{outputs_str}],\n' if self.outputs else ''
         nodes_str = "\n".join(str(node) for node in self.nodes)
-        n_str = f'\tnodes=[\n{nodes_str}],\n' if self.nodes else ''
+        n_str = f'\tnodes=[\n{nodes_str}]\n' if self.nodes else ''
         return (f'{self.__class__.__name__}(name={self.name},\n'
                 f'{in_str}{o_str}{n_str}'
                 f')\n')
