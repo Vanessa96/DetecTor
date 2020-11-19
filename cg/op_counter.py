@@ -273,35 +273,43 @@ aten_sum = aten_unary()
 
 
 def aten_matmul(node):
-    # todo: important to consider all possible cases
-    if node.inputs[0].ndim == 1 and node.inputs[1].ndim == 1:
-        # [] = aten::matmul([n], [n])
-        n = node.inputs[0].shape[0]
-        return n
-    elif node.inputs[0].ndim == 1 and node.inputs[1].ndim == 2:
-        # [m] = aten::matmul([n], [n, m])
-        n, m = node.inputs[1].shape
-        return n * m
-    elif node.inputs[0].ndim == 2 and node.inputs[1].ndim == 1:
-        # [n] = aten::matmul([n, m], [m])
-        n, m = node.inputs[0].shape
-        return n * m
-    elif node.inputs[0].ndim == 2 and node.inputs[1].ndim == 2:
-        # [n, p] = aten::matmul([n, m], [m, p])
-        n, m = node.inputs[0].shape
-        m, p = node.inputs[1].shape
-        return n * m * p
-    elif node.inputs[0].ndim == 1:
-        # [..., m] = aten::matmul([n], [..., n, m])
-        *b, n, m = node.inputs[1].shape
-        return math.prod(b) * n * m
-    elif node.inputs[1].ndim == 1:
-        # [..., n] = aten::matmul([..., n, m], [m])
-        *b, n, m = node.inputs[0].shape
-        return math.prod(b) * n * m
+    # important to consider all possible cases:
+    #  - ab,bc->abc
+    #  - abc,cd->abd
+    #  - abcd,abde->abce
+    # the above three are tested, though may have other cases
+
+    n_0 = node.inputs[0]
+    n_0_dims = len(n_0.shape)
+    n_1 = node.inputs[1]
+    n_1_dims = len(n_1.shape)
+    if n_0_dims == 2 and n_1_dims == 2:
+        # ab,bc->abc
+        m, n = n_0.shape
+        p = n_1.shape[-1]
+        flops = n * m * p * 2
+        mem_bytes = (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
+    elif n_0_dims == 3 and n_1_dims == 2:
+        # abc,cd->abd, similar to bmm
+        a, b, c = n_0.shape
+        d = n_1.shape[-1]
+        m = b
+        n = c
+        p = d
+        bs = a
+        flops = bs * n * m * p * 2
+        mem_bytes = bs * (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
+    elif n_0_dims == 4 and n_1_dims == 4:
+        # abcd,abde->abce, similar to bmm
+        a, b, c, d = n_0.shape
+        e = n_1.shape[-1]
+        m = c
+        n = d
+        p = e
+        bs = (a * b)
+        flops = bs * n * m * p * 2
+        mem_bytes = bs * (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
     else:
-        # [..., n, p] = aten::matmul([..., n, m], [..., m, p])
-        *b, n, p = node.outputs[0].shape
-        *_, n, m = node.inputs[0].shape
-        *_, m, p = node.inputs[1].shape
-        return math.prod(b) * n * m * p
+        raise NotImplementedError(f"matmul flops not available for {node}")
+
+    return flops, mem_bytes
