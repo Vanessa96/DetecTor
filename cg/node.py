@@ -14,6 +14,8 @@ from typing import List
 
 from transformers import AutoConfig
 
+from cg.op_counter import count_flops_mem_bytes
+
 
 @dataclass
 class OpNode:
@@ -159,6 +161,9 @@ def construct_aggregation_graph(trace_graph, model_name):
         op_data_types.update(out_dtypes)
         # todo: build nodes connection, set scope to modules
         op_node = OpNode(node_id, node_op, node_scope, in_nodes, out_nodes)
+        op_flops, op_mem_bytes = count_flops_mem_bytes(op_node)
+        op_node.flops = op_flops
+        op_node.mem_bytes = op_mem_bytes
         nodes.append(op_node)
     # todo: handle return node to make it go_node
     return Graph(model_name, nodes, gi_nodes, go_nodes), op_data_types
