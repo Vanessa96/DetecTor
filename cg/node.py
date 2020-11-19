@@ -4,13 +4,15 @@ from __future__ import annotations
 
 __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 
+import torch
+
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
-from typing import List
-import torch
-from transformers import AutoConfig
 from typing import Dict
+from typing import List
+
+from transformers import AutoConfig
 
 
 @dataclass
