@@ -59,6 +59,7 @@ def profile_model(model, input_ids, runs, cu_mem):
     global_pre_repeats = dict()
     global_post_repeats = dict()
 
+    # todo: may need to track shared scopes and set them to jit trace
     for name, module in model.named_modules():
         # print(name, module.__class__.__name__)
         start_logger = log_builder(name, model_start_timings,

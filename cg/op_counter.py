@@ -133,26 +133,103 @@ def aten_activation(node):
 
 def aten_addmm(node):  # also for conv1d in huggingface lib
     # [n, p] = aten::addmm([n, p], [n, m], [m, p], *, *)
-    n, m = node.inputs[1].shape
-    m, p = node.inputs[2].shape
-    return n * m * p
+    n_1 = node.inputs[1]
+    n, m = n_1.shape
+    # n_2 = node.inputs[2] # n_2 maybe empty, infer from outputs
+    p = node.outputs[0].shape[-1]
+    flops = n * m * p * 2
+    mem_bytes = (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
+    return flops, mem_bytes
 
 
-# should also consider broadcasting, use output nodes only
-def aten_elementwise(node):
-    # todo: abs, add, add_, div, mul, mul_, rsub, sub
-    out_shape = node.outputs[0].shape
-    return math.prod(out_shape)
+def aten_bmm(node):
+    # [b, n, p] = aten::bmm([b, m, n], [b, n, p], *, *)
+    n_0 = node.inputs[0]
+    n_1 = node.inputs[1]
+    b, m, n = n_0.shape
+    p = n_1.shape[-1]
+    assert b == n_1.shape[0] and n == n_1.shape[1]
+    flops = b * n * m * p * 2
+    mem_bytes = b * (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
+    return flops, mem_bytes
 
 
-aten_abs = aten_elementwise
-aten_add = aten_elementwise
-aten_add_ = aten_elementwise
-aten_div = aten_elementwise
-aten_mul = aten_elementwise
-aten_mul_ = aten_elementwise
-aten_rsub = aten_elementwise
-aten_sub = aten_elementwise
+def aten_clone(node):
+    in_0 = node.inputs[0]
+    in_shape = in_0.shape
+    mem_bytes = 2 * math.prod(in_shape) * _dtype_to_bytes(in_0.dtype)
+    return 0, mem_bytes
+
+
+def aten_copy_(node):
+    in_0 = node.inputs[0]
+    in_vol = math.prod(in_0.shape)
+    out_0 = node.outputs[0]
+    out_vol = math.prod(out_0.shape)
+    mem_bytes = (in_vol + out_vol) * _dtype_to_bytes(in_0.dtype)
+    return 0, mem_bytes
+
+
+def aten_einsum(node):
+    # todo: albert torch.einsum("bfnd,ndh->bfh", context_layer, w) + b
+    #  check reference impl
+    #  https://github.com/facebookresearch/fvcore/blob/7bc26c1f2a3ebc1ff91f266bf3ac37b23ee35842/fvcore/nn/jit_handles.py#L255
+    pass
+
+
+def aten_embedding(node):
+    return 0
+
+
+def aten_gelu(node):
+    return 0
+
+
+def aten_relu(node):
+    return 0
+
+
+def aten_unary(fops_per_elem=1, mem_per_elem=1):
+    # for: abs, rsqrt
+    def counter(node):
+        in_0 = node.inputs[0]
+        in_shape = in_0.shape
+        vol = math.prod(in_shape)
+        flops = vol * fops_per_elem
+        mem_bytes = vol * mem_per_elem * _dtype_to_bytes(in_0.dtype)
+        return flops, mem_bytes
+
+    return counter
+
+
+# todo: support broadcast
+#  https://github.com/adityaiitb/pyprof2/blob/b2ac33876a2ab5bbd41595f0692a0fc936e7d8b7/pyprof2/prof/pointwise.py#L97
+
+def aten_binary(fops_per_elem=1, mem_per_elem=2):
+    def counter(node):
+        # for: add, add_, div, mul, mul_, rsub, sub
+        out_0 = node.outputs[0]
+        out_shape = out_0.shape
+        vol = math.prod(out_shape)
+        flops = vol * fops_per_elem
+        mem_bytes = vol * mem_per_elem * _dtype_to_bytes(out_0.dtype)
+        return flops, mem_bytes
+
+    return counter
+
+
+aten_abs = aten_unary()
+aten_add = aten_binary()
+aten_add_ = aten_binary()
+aten_div = aten_binary()
+aten_mul = aten_binary(mem_per_elem=3)
+aten_mul_ = aten_binary(mem_per_elem=3)
+aten_pow = aten_binary()
+aten_rsub = aten_binary(mem_per_elem=3)
+aten_rsqrt = aten_unary(fops_per_elem=2)
+aten_softmax = aten_unary(fops_per_elem=5)
+aten_sub = aten_binary()
+aten_tanh = aten_unary(fops_per_elem=4)
 
 
 def aten_layer_norm(node):
@@ -194,9 +271,5 @@ def aten_matmul(node):
         return math.prod(b) * n * m * p
 
 
-def aten_softmax(node):
-    """ DxVx2 from the NeurIPS 2018 paper below
-    "Navigating with graph representations for fast and scalable decoding of neural language models."
-    """
-    # todo:
-    pass
+def aten_sum(node):
+    return
