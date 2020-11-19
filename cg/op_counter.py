@@ -20,6 +20,7 @@ import math
 # ops marked with # p1 are implemented
 # ops marked with # only are planned with low priority
 import warnings
+from collections import OrderedDict
 
 op_counters = {
     'aten::Int': 'aten_Int',
@@ -55,9 +56,9 @@ op_counters = {
     'aten::masked_fill': 'aten_masked_fill',
     'aten::masked_fill_': 'aten_masked_fill_',
     'aten::matmul': 'aten_matmul',  # p1
-    'aten::max': 'aten_max',  #
-    'aten::mean': 'aten_mean',  #
-    'aten::min': 'aten_min',  #
+    'aten::max': 'aten_max',  # p1
+    'aten::mean': 'aten_mean',  # p1
+    'aten::min': 'aten_min',  # p1
     'aten::mul': 'aten_mul',  # p1
     'aten::mul_': 'aten_mul_',  # p1
     'aten::ne': 'aten_ne',  #
@@ -126,69 +127,6 @@ def count_flops_io(node):
         return op_func(node)
 
 
-def aten_activation(node):
-    # todo: linear, relu, tanh, sigmoid, gelu, mish, swish, silu
-    pass
-
-
-def aten_addmm(node):  # also for conv1d in huggingface lib
-    # [n, p] = aten::addmm([n, p], [n, m], [m, p], *, *)
-    n_1 = node.inputs[1]
-    n, m = n_1.shape
-    # n_2 = node.inputs[2] # n_2 maybe empty, infer from outputs
-    p = node.outputs[0].shape[-1]
-    flops = n * m * p * 2
-    mem_bytes = (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
-    return flops, mem_bytes
-
-
-def aten_bmm(node):
-    # [b, n, p] = aten::bmm([b, m, n], [b, n, p], *, *)
-    n_0 = node.inputs[0]
-    n_1 = node.inputs[1]
-    b, m, n = n_0.shape
-    p = n_1.shape[-1]
-    assert b == n_1.shape[0] and n == n_1.shape[1]
-    flops = b * n * m * p * 2
-    mem_bytes = b * (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
-    return flops, mem_bytes
-
-
-def aten_clone(node):
-    in_0 = node.inputs[0]
-    in_shape = in_0.shape
-    mem_bytes = 2 * math.prod(in_shape) * _dtype_to_bytes(in_0.dtype)
-    return 0, mem_bytes
-
-
-def aten_copy_(node):
-    in_0 = node.inputs[0]
-    in_vol = math.prod(in_0.shape)
-    out_0 = node.outputs[0]
-    out_vol = math.prod(out_0.shape)
-    mem_bytes = (in_vol + out_vol) * _dtype_to_bytes(in_0.dtype)
-    return 0, mem_bytes
-
-
-def aten_einsum(node):
-    # todo: albert torch.einsum("bfnd,ndh->bfh", context_layer, w) + b
-    #  check reference impl
-    #  https://github.com/facebookresearch/fvcore/blob/7bc26c1f2a3ebc1ff91f266bf3ac37b23ee35842/fvcore/nn/jit_handles.py#L255
-    pass
-
-
-def aten_embedding(node):
-    return 0
-
-
-def aten_gelu(node):
-    return 0
-
-
-def aten_relu(node):
-    return 0
-
-
 def aten_unary(fops_per_elem=1, mem_per_elem=1):
     # for: abs, rsqrt
     def counter(node):
@@ -218,6 +156,102 @@ def aten_binary(fops_per_elem=1, mem_per_elem=2):
     return counter
 
 
+def aten_addmm(node):  # also for conv1d in huggingface lib
+    # reference from
+    # https://github.com/adityaiitb/pyprof2/blob/b2ac33876a2ab5bbd41595f0692a0fc936e7d8b7/pyprof2/prof/blas.py#L8
+    # [n, p] = aten::addmm([n, p], [n, m], [m, p], *, *)
+    n_1 = node.inputs[1]
+    n, m = n_1.shape
+    # n_2 = node.inputs[2] # n_2 maybe empty, infer from outputs
+    p = node.outputs[0].shape[-1]
+    flops = n * m * p * 2
+    mem_bytes = (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
+    return flops, mem_bytes
+
+
+def aten_bmm(node):
+    # reference from
+    # https://github.com/adityaiitb/pyprof2/blob/b2ac33876a2ab5bbd41595f0692a0fc936e7d8b7/pyprof2/prof/blas.py#L89
+    # [b, n, p] = aten::bmm([b, m, n], [b, n, p], *, *)
+    n_0 = node.inputs[0]
+    n_1 = node.inputs[1]
+    b, m, n = n_0.shape
+    p = n_1.shape[-1]
+    assert b == n_1.shape[0] and n == n_1.shape[1]
+    flops = b * n * m * p * 2
+    mem_bytes = b * (m * n + m * p + n * p) * _dtype_to_bytes(n_1.dtype)
+    return flops, mem_bytes
+
+
+def aten_clone(node):
+    in_0 = node.inputs[0]
+    in_shape = in_0.shape
+    mem_bytes = 2 * math.prod(in_shape) * _dtype_to_bytes(in_0.dtype)
+    return 0, mem_bytes
+
+
+def aten_copy_(node):
+    in_0 = node.inputs[0]
+    in_vol = math.prod(in_0.shape)
+    out_0 = node.outputs[0]
+    out_vol = math.prod(out_0.shape)
+    mem_bytes = (in_vol + out_vol) * _dtype_to_bytes(in_0.dtype)
+    return 0, mem_bytes
+
+
+def aten_einsum(node):
+    # only checked albert torch.einsum("bfnd,ndh->bfh", context_layer, w) + b
+    # reference impl
+    # https://github.com/facebookresearch/fvcore/blob/7bc26c1f2a3ebc1ff91f266bf3ac37b23ee35842/fvcore/nn/jit_handles.py#L255
+    n_0 = node.inputs[0]  # str
+    notation = n_0.extra['str']  # 'bfnd,ndh->bfh'
+    equation = notation.replace(" ", "")
+    # Re-map equation so that same equation with different alphabet
+    # representations will look the same.
+    letter_order = OrderedDict((k, 0) for k in equation if k.isalpha()).keys()
+    mapping = {ord(x): 97 + i for i, x in enumerate(letter_order)}
+    equation = equation.translate(mapping)
+
+    n_1 = node.inputs[1]
+    input_shapes = n_1.shape  # list of shape
+    if equation == "abcd,cde->abe":  # albert einsum
+        # (ab)(cd) * (cd)(e) => (ab)(e)
+        # m, n, p => mn + np + mp similar to addmm
+        a, b, c, d = input_shapes[0]
+        e = input_shapes[-1][-1]
+        m = a * b
+        n = c * d
+        flops = m * n * e * 2
+        mem_bytes = (m * n + n * e + m * e) * _dtype_to_bytes(n_1.dtype)
+    elif equation == "abc,abd->acd":
+        a, b, c = input_shapes[0]
+        d = input_shapes[-1][-1]
+        flops = a * b * c * d * 2
+        mem_bytes = a * (b * c + b * d + c * d) * _dtype_to_bytes(n_1.dtype)
+    elif equation == "abc,adc->adb":
+        a, b, c = input_shapes[0]
+        d = input_shapes[-1][1]
+        flops = a * b * c * d * 2
+        mem_bytes = a * (b * c + d * c + d * b) * _dtype_to_bytes(n_1.dtype)
+    else:
+        raise NotImplementedError("Unsupported einsum operation.")
+
+    return flops, mem_bytes
+
+
+def aten_embedding(node):
+    n_in = node.inputs[1]  # [bs, seq]
+    in_bytes = math.prod(n_in.shape) * _dtype_to_bytes(n_in.dtype)
+    n_out = node.outputs[0]  # [bs, seq, dim]
+    out_bytes = math.prod(n_out.shape) * _dtype_to_bytes(n_out.dtype)
+    mem_bytes = in_bytes + out_bytes
+    return 0, mem_bytes  # todo: approximate embedding operation flops
+
+
+aten_relu = aten_unary(fops_per_elem=1, mem_per_elem=2)
+aten_gelu = aten_unary(fops_per_elem=6, mem_per_elem=2)
+aten_layer_norm = aten_unary(fops_per_elem=8, mem_per_elem=4)
+
 aten_abs = aten_unary()
 aten_add = aten_binary()
 aten_add_ = aten_binary()
@@ -227,17 +261,19 @@ aten_mul_ = aten_binary(mem_per_elem=3)
 aten_pow = aten_binary()
 aten_rsub = aten_binary(mem_per_elem=3)
 aten_rsqrt = aten_unary(fops_per_elem=2)
-aten_softmax = aten_unary(fops_per_elem=5)
+aten_softmax = aten_unary(fops_per_elem=5, mem_per_elem=3)
 aten_sub = aten_binary()
 aten_tanh = aten_unary(fops_per_elem=4)
 
-
-def aten_layer_norm(node):
-    os = node.outputs[0].shape
-    return math.prod(os)
+# todo: more accurate calculation?
+aten_max = aten_unary()
+aten_mean = aten_unary()
+aten_min = aten_unary()
+aten_sum = aten_unary()
 
 
 def aten_matmul(node):
+    # todo: important to consider all possible cases
     if node.inputs[0].ndim == 1 and node.inputs[1].ndim == 1:
         # [] = aten::matmul([n], [n])
         n = node.inputs[0].shape[0]
@@ -269,7 +305,3 @@ def aten_matmul(node):
         *_, n, m = node.inputs[0].shape
         *_, m, p = node.inputs[1].shape
         return math.prod(b) * n * m * p
-
-
-def aten_sum(node):
-    return
