@@ -5,9 +5,12 @@ from __future__ import annotations
 __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 
 from dataclasses import dataclass
+from dataclasses import field
+from typing import Any
 from typing import List
 import torch
 from transformers import AutoConfig
+from typing import Dict
 
 
 @dataclass
@@ -18,7 +21,6 @@ class OpNode:
     scope: str  # scope + id
     inputs: List[DataNode]
     outputs: List[DataNode]
-    # attr: dict[str, Any] = field(default_factory=dict)  # extra information
     flops: int = 0  # number of operations
     mem_bytes: int = 0  # bytes of mem reads and writes
 
@@ -41,8 +43,8 @@ class DataNode:
     id: str
     dtype: str
     shape: List[int]  # tensor shape
+    extra: Dict[str, Any] = field(default_factory=dict)  # extra information
     # params: bool = False  # flattened array weights
-    # attr: dict[str, Any] = field(default_factory=dict)  # extra information
     # mem_read_bytes: int = 0  # amount of data read from input nodes
     # mem_write_bytes: int = 0  # amount of data written to output nodes
 
@@ -81,16 +83,32 @@ def _process_data_nodes(node_inputs, data_nodes):
         name = ni.debugName()
         node_type = ni.type()
         data_types.add(str(node_type))
+        extra = dict()
         if isinstance(node_type, torch.TensorType):
             dtype = ni.type().scalarType()  # Float
             shape = ni.type().sizes()  # list of int
             # check how to detect if this is a parameter data node
+        # elif isinstance(node_type, torch.Intt)
+        elif isinstance(node_type, torch.StringType):
+            dtype = str(node_type)
+            shape = []
+            extra['str'] = ni.toIValue()
+
+        elif isinstance(node_type, torch.ListType):
+            dtype = node_type.getElementType()
+            shape = []
+            # most of them are from prim::ListConstruct
+            # only handle tensor here,
+            if isinstance(dtype, torch.TensorType):
+                for nii in ni.node().inputs():
+                    dtype = nii.type().scalarType()
+                    shape.append(nii.type().sizes())
         else:
             # for types like int, int[], Long(), Device, bool, None
             # most of them are functional args, no special handling
             dtype = str(node_type)
             shape = []
-        ni_node = data_nodes.get(name, DataNode(name, dtype, shape))
+        ni_node = data_nodes.get(name, DataNode(name, dtype, shape, extra))
         in_nodes.append(ni_node)
         data_nodes[name] = ni_node
     return in_nodes, data_types
