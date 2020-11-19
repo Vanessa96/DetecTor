@@ -107,8 +107,9 @@ def _process_data_nodes(node_inputs, data_nodes):
             shape = []
             # most of them are from prim::ListConstruct
             # only handle tensor here,
-            if isinstance(dtype, torch.TensorType):
-                for nii in ni.node().inputs():
+            for nii in ni.node().inputs():
+                # only care about tensors
+                if isinstance(dtype, torch.TensorType):
                     dtype = nii.type().scalarType()
                     shape.append(nii.type().sizes())
         else:
@@ -149,10 +150,14 @@ def construct_aggregation_graph(trace_graph, model_name):
         node_scope = node.scopeName().replace('__module.', '').split('/')[-1]
         node_op = node.kind()
         # ops.add(node_op)
+        # todo: handle prim nodes: Constant, GetAttr, ListConstruct, ListUnpack,
+        #  TupleConstruct, TupleUnpack, NumToTensor
+        #  shrink node depth
         in_nodes, in_dtypes = _process_data_nodes(node_inputs, data_nodes)
         out_nodes, out_dtypes = _process_data_nodes(node_outputs, data_nodes)
         op_data_types.update(in_dtypes)
         op_data_types.update(out_dtypes)
+        # todo: build nodes connection, set scope to modules
         op_node = OpNode(node_id, node_op, node_scope, in_nodes, out_nodes)
         nodes.append(op_node)
     # todo: handle return node to make it go_node
