@@ -24,7 +24,7 @@ firmware/compiled/update # just a simple script to flash the firmware.
 
 put firmware/rs.py # sampling script, run on the raspberry pi.
 
-note files in the snapshot folder contains a full copy of the code that works if for any reason the above change does not work, the firmware.hex can be directly flashed to the emonPi.
+also see `https://github.com/csarron/emonpi` if for any reason the above change does not work.
 
 ### Sampling energy using emonPi
 
