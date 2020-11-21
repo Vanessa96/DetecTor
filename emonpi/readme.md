@@ -28,6 +28,8 @@ note files in the snapshot folder contains a full copy of the code that works if
 
 ### Sampling energy using emonPi
 
+`pip install pyserial==3.4`
+
 run `python rs.py`
 
 the script content is below, feel free to modify them as needed.
