@@ -80,3 +80,39 @@ for gpu power, `nvmlDeviceGetPowerUsage`, 20ms granularity for the `nvmlDeviceGe
     // To represent memory clock samples
     NVML_MEMORY_CLK_SAMPLES         = 6,
 ```
+
+emonpi 
+
+wiki: https://wiki.openenergymonitor.org/index.php/EmonPi
+
+
+data transmission, maximum size to 66 bytes.
+
+https://learn.openenergymonitor.org/electricity-monitoring/networking/sending-data-between-nodes-rfm
+arduino uno atmega data types: https://www.arduino.cc/reference/en/language/variables/data-types/int/
+int is 2 byte, -32768 ~ 32767
+
+```c
+typedef struct {
+  int power1, power2, power3, Vrms;
+} PayloadTX;
+
+```
+
+raspberrypi current sensor, http://lechacal.com/wiki/index.php/Raspberrypi_Current_and_Temperature_Sensor_Adaptor
+
+stty man: https://linux.die.net/man/1/stty
+
+```shell
+stty -F /dev/ttyAMA0 raw speed 38400
+cat /dev/ttyAMA0
+
+```
+
+emonpi the overhead of compute crossing in calcVI is high, > 100 ms, 20 crossing, each take 5 ms
+```cpp
+// https://github.com/openenergymonitor/EmonLib/blob/02d21ad457d4bc42b386c9952e21e552d7847e41/EmonLib.cpp#L94
+void EnergyMonitor::calcVI(unsigned int crossings, unsigned int timeout)
+```
+
+
