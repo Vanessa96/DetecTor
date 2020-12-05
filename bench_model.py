@@ -27,7 +27,7 @@ def log_builder(name, timings, global_repeats, pre_hook,
         repeats += 1
         global_repeats[module_key] = repeats
         log_key = f'{module_key}:{repeats}'
-        timings[log_key] = time.perf_counter()
+        timings[log_key] = time.clock_gettime(time.CLOCK_REALTIME)
         if cu_mem:
             # torch.cuda.empty_cache()
             # torch.cuda.reset_peak_memory_stats()
