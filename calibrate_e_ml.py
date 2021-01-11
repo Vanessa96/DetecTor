@@ -2,6 +2,16 @@
 # -*- coding: utf-8 -*-
 __author__ = "Yash Kumar Lal"
 
+"""
+The 'information' variable in the script contains all the requisite information for one run of the model
+Example usage: python calibrate_e_ml.py --model-name bert-base-uncased --batch-size 2 --input-len 100 --no-cuda
+Arguments:
+    model-name: model name in huggingface repository (e.g. prajjwal1/bert-tiny)
+    batch-size: batch size of input tensor, first parameter of shape for model input
+    input-len: input length of input tensor, second parameter of shape for model input
+    no-cuda: use if you don't want the script to use CUDA
+"""
+
 import os
 import argparse
 import csv
