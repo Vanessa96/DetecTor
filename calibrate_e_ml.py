@@ -88,17 +88,18 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
         module_info['outputs'] = module_outputs[module_name]
         module_info['runtime'] = end_times[module_name] - start_times[module_name]
 
-        if 'linear' in module_name.lower():
+        module_identifier = module_name.split(':')[-1]
+        if module_identifier == 'Linear':
             try:
                 information['linear'].append(module_info)
             except:
                 information['linear'] = [module_info]
-        elif 'layernorm' in module_name.lower():
+        elif module_identifier == 'LayerNorm':
             try:
                 information['layernorm'].append(module_info)
             except:
                 information['layernorm'] = [module_info]
-        elif 'embedding' in module_name.lower():
+        elif module_identifier == 'Embedding':
             try:
                 information['embedding'].append(module_info)
             except:
