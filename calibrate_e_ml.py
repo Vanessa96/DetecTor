@@ -20,6 +20,7 @@ import torch
 from transformers import AutoModel
 from transformers import AutoConfig
 from collections import defaultdict
+from torch import nn
 
 start_times = dict()
 end_times = dict()
@@ -28,7 +29,7 @@ module_outputs = dict()
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-name', type=str, help='Huggingface model name to work with (e.g. bert)', default='bert-base-uncased')
+    parser.add_argument('--model-name', type=str, help='Huggingface model name to work with (e.g. bert-base-uncased, distilbert-base-uncased, google/mobilebert-uncased, roberta-base)', default='bert-base-uncased')
     parser.add_argument('--batch-size', type=int, help='Batch size of input to run model with', default=1)
     parser.add_argument('--input-len', type=int, help='Length of input to run model with', default=100)
     parser.add_argument('--no-cuda', dest='no_cuda', action='store_true', help='Remove use of CUDA')
@@ -53,15 +54,15 @@ def is_ml_operation(module):
     This function checks if any given module is of a type that we want to analyse for E_ML operations
     """
 
-    if isinstance(module, torch.nn.Linear):
-        return True
-    elif isinstance(module, torch.nn.LayerNorm):
-        return True
-    elif isinstance(module, torch.nn.Embedding):
-        return True
+    e_ml_operations = [nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d, nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.GRU, nn.Dropout]
+
+    for e_ml_op in e_ml_operations:
+        if isinstance(module, e_ml_op):
+            return True
     return False
 
-def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
+def load_model(model_name, cuda_available):
+
     config = AutoConfig.from_pretrained(model_name)
     config.torchscript = True
     model = AutoModel.from_config(config)
@@ -72,12 +73,39 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
     device = torch.device("cuda" if cuda_exist and not cuda_available else "cpu")
     model = model.eval().to(device)
 
-    inputs = torch.randint(1000, size=(batch_size, input_len)).long()
+    return model, device
+
+def all_operations(model_name, cuda_available):
+
+    """
+    This function returns the class names of all operations used in a model
+    """
+
+    model, _ = load_model(model_name, cuda_available)
+
+    all_operations = set()
+
+    for (name, module) in model.named_modules():
+        mname = module.__class__.__name__
+        all_operations.add(mname)
+
+    return all_operations
+
+def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
+
+    """
+    This function returns information about all the ML level operations in a model
+    """
+
+    model, device = load_model(model_name, cuda_available)
 
     for (name, module) in model.named_modules():
         if is_ml_operation(module):
             module.register_forward_pre_hook(log_start_builder(name))
             module.register_forward_hook(log_end_builder(name))
+
+    inputs = torch.randint(1000, size=(batch_size, input_len)).long()
+    inputs = inputs.to(device)
 
     loss = model(input_ids=inputs, return_dict=True)
 
@@ -90,16 +118,12 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
         module_info['runtime'] = end_times[module_name] - start_times[module_name]
 
         module_identifier = module_name.split(':')[-1]
-        if module_identifier == 'Linear':
-            information['linear'].append(module_info)
-        elif module_identifier == 'LayerNorm':
-            information['layernorm'].append(module_info)
-        elif module_identifier == 'Embedding':
-            information['embedding'].append(module_info)
+        information[module_identifier.lower()].append(module_info)
 
     return information
 
 def main(args):
+    operation_names = all_operations(args.model_name, args.no_cuda)
     information = calibrate_e_ml(args.model_name, args.batch_size, args.input_len, args.no_cuda)
 
 if __name__ == '__main__':
