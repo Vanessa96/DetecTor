@@ -19,6 +19,7 @@ import time
 import torch
 from transformers import AutoModel
 from transformers import AutoConfig
+from collections import defaultdict
 
 start_times = dict()
 end_times = dict()
@@ -80,7 +81,7 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
 
     loss = model(input_ids=inputs, return_dict=True)
 
-    information = {}
+    information = defaultdict(list)
     for module_name in start_times.keys():
         module_info = {}
         module_info['name'] = module_name
@@ -90,20 +91,11 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
 
         module_identifier = module_name.split(':')[-1]
         if module_identifier == 'Linear':
-            try:
-                information['linear'].append(module_info)
-            except:
-                information['linear'] = [module_info]
+            information['linear'].append(module_info)
         elif module_identifier == 'LayerNorm':
-            try:
-                information['layernorm'].append(module_info)
-            except:
-                information['layernorm'] = [module_info]
+            information['layernorm'].append(module_info)
         elif module_identifier == 'Embedding':
-            try:
-                information['embedding'].append(module_info)
-            except:
-                information['embedding'] = [module_info]
+            information['embedding'].append(module_info)
 
     return information
 
