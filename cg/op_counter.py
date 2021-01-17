@@ -134,12 +134,15 @@ def prod(iterable):
     return reduce(operator.mul, iterable, 1)
 
 
+math.prod = prod
+
+
 def aten_unary(fops_per_elem=1, mem_per_elem=1):
     # for: abs, rsqrt
     def counter(node):
         in_0 = node.inputs[0]
         in_shape = in_0.shape
-        vol = prod(in_shape)
+        vol = math.prod(in_shape)
         flops = vol * fops_per_elem
         mem_bytes = vol * mem_per_elem * _dtype_to_bytes(in_0.dtype)
         return flops, mem_bytes
