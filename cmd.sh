@@ -11,9 +11,9 @@ python bench_model.py -p -o data/models -r 10 -b 32 -i 256 -m facebook/bart-base
 
 python ml_level_exp.py -o data/mlexp -r 10 -b 16 -i 384 -m "prajjwal1/bert-tiny" -n 10000 2>&1 | tee data/ml-exp2.log
 
-for b in 1 `seq 2 2 32`; do
-  for i in `seq 16 16 384`; do
+for b in `seq 32 -2 2` 1; do
+  for i in `seq 384 -16 16`; do
     echo ${i},${b}=$(($i * $b))
-    python ml_level_exp.py -o data/mlexp -r 10 -b ${b} -i ${i} -m "prajjwal1/bert-tiny" -n 10000 2>&1 | tee data/ml-exp-linear-bert-tiny-b${b}-i${i}.log
+    python ml_level_exp.py -o data/mlexp -r 10 -b ${b} -i ${i} -m "bert-base-uncased" -n 10000 2>&1 | tee data/ml-exp-linear-bert-tiny-b${b}-i${i}.log
   done
 done
