@@ -26,6 +26,8 @@ start_times = dict()
 end_times = dict()
 module_inputs = dict()
 module_outputs = dict()
+modules = dict()
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -44,8 +46,9 @@ def log_start_builder(name):
 def log_end_builder(name):
     def log_end(module, m_in, m_out):
         end_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
-        module_inputs[f'{name}:{module.__class__.__name__}'] = m_in[0].shape
-        module_outputs[f'{name}:{module.__class__.__name__}'] = m_out.shape
+        module_inputs[f'{name}:{module.__class__.__name__}'] = (m_in[0].shape, m_in[0].dtype)
+        module_outputs[f'{name}:{module.__class__.__name__}'] = (m_out.shape, m_out.dtype)
+        modules[f'{name}:{module.__class__.__name__}'] = module
     return log_end
 
 def is_ml_operation(module):
@@ -113,6 +116,7 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
     for module_name in start_times.keys():
         module_info = {}
         module_info['name'] = module_name
+        module_info['module'] = modules[module_name]
         module_info['inputs'] = module_inputs[module_name]
         module_info['outputs'] = module_outputs[module_name]
         module_info['runtime'] = end_times[module_name] - start_times[module_name]
