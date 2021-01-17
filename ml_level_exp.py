@@ -14,7 +14,15 @@ from cg.node import construct_aggregation_graph
 
 
 def get_flops_mem_bytes(graph):
-    return 0, 0
+    flops = dict()
+    mem_bytes = dict()
+
+    for node in graph.nodes:
+        flops[node.id] = node.flops
+        mem_bytes[node.id] = node.mem_bytes
+        if node.flops:
+            print(node.op, node.flops, node.mem_bytes)
+    return sum(flops.values()), sum(mem_bytes.values())
 
 
 def run_level(level, num_repeats, runs):
