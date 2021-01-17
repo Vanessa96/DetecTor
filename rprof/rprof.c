@@ -158,6 +158,12 @@ int main(int argc, char ** argv) {
   struct meminfo mem_util;
   get_stats(&cpu_util_prev, -1);
   usleep(profile_interval); // sleep one interval to avoid negative first sample
+  fprintf(output_file, "timestamp,cpu,mem,n_gpu");
+  for (unsigned device_idx = 0; device_idx < device_count; device_idx++)
+  {
+    fprintf(output_file, ",gpu,gpu_mem,gpu_power");
+  }
+  fprintf(output_file, "\n");
   while (interrupt == 0 && (sample_time - start_time) < timeout)
   {
 
