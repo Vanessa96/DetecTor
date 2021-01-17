@@ -25,12 +25,15 @@ def get_flops_mem_bytes(graph):
     return sum(flops.values()), sum(mem_bytes.values())
 
 
-def run_level(level, num_repeats, runs):
+def run_level(level, num_repeats, runs, device):
     fn = level['module']
     fname = level['name']
     fi_size, fi_dtype = level['inputs']
     # fo_size, fo_dtype = level['outputs']
-    fi = torch.rand(fi_size, dtype=fi_dtype)
+    if fi_dtype in (torch.int32, torch.int64, torch.long):
+        fi = torch.randint(1000, fi_size, dtype=fi_dtype, device=device)
+    else:
+        fi = torch.rand(fi_size, dtype=fi_dtype, device=device)
     # fo = torch.rand(fo_size, dtype=fo_dtype)
     trace = torch.jit.trace(fn, fi)
     trace_graph = trace.inlined_graph
@@ -58,17 +61,19 @@ def main(args):
 
     torch.set_grad_enabled(False)
     use_cuda = not args.no_cuda
+    cuda_exist = torch.cuda.is_available()
+    device = torch.device("cuda" if cuda_exist and use_cuda else "cpu")
     seq_len = args.input_length
     bs = args.batch_size
     for model_name in args.models:
         print(f'profiling {model_name} ml levels...')
         filename = f'{model_name}_level_r{runs}_b{bs}_i{seq_len}.json'
         prof_info_file = out_dir.joinpath(filename)
-        information = calibrate_e_ml(model_name, bs, seq_len, use_cuda)
+        information = calibrate_e_ml(model_name, bs, seq_len, device)
         model_prof_info = []
         for level_type, levels in information.items():
             for level in levels:
-                prof_info = run_level(level, num_repeats, runs)
+                prof_info = run_level(level, num_repeats, runs, device)
                 prof_info['type'] = level_type
                 model_prof_info.append(prof_info)
         prof_info_file.write_text(json.dumps(model_prof_info))
