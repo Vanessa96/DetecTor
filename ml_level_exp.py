@@ -92,10 +92,11 @@ def main(args):
     bs = args.batch_size
     for model_name in args.models:
         logger.info(f'profiling {model_name} ml levels on {device}...')
-        filename = f'{model_name}_level_r{runs}_b{bs}_i{seq_len}.json'
-        prof_info_file = out_dir.joinpath(filename)
         information = calibrate_e_ml(model_name, bs, seq_len, device)
         model_prof_info = []
+        model_name = model_name.replace('/', '_')
+        filename = f'{model_name}_level_r{runs}_b{bs}_i{seq_len}.json'
+        prof_info_file = out_dir.joinpath(filename)
         for level_type, levels in information.items():
             # todo: support all ML levels
             if level_type != 'linear':
