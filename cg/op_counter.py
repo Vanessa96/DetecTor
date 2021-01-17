@@ -19,8 +19,10 @@ import math
 
 # ops marked with # p1 are implemented
 # ops marked with # only are planned with low priority
+import operator
 import warnings
 from collections import OrderedDict
+from functools import reduce
 
 op_counters = {
     'aten::Int': 'aten_Int',
@@ -128,12 +130,16 @@ def count_flops_mem_bytes(node):
         return op_func(node)
 
 
+def prod(iterable):
+    return reduce(operator.mul, iterable, 1)
+
+
 def aten_unary(fops_per_elem=1, mem_per_elem=1):
     # for: abs, rsqrt
     def counter(node):
         in_0 = node.inputs[0]
         in_shape = in_0.shape
-        vol = math.prod(in_shape)
+        vol = prod(in_shape)
         flops = vol * fops_per_elem
         mem_bytes = vol * mem_per_elem * _dtype_to_bytes(in_0.dtype)
         return flops, mem_bytes
