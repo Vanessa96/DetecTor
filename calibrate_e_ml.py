@@ -57,34 +57,27 @@ def is_ml_operation(module):
     This function checks if any given module is of a type that we want to analyse for E_ML operations
     """
 
-    e_ml_operations = [nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d, nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.GRU, nn.Dropout]
+    e_ml_operations = [nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d, nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.GRU]
 
     for e_ml_op in e_ml_operations:
         if isinstance(module, e_ml_op):
             return True
     return False
 
-def load_model(model_name, cuda_available):
-
+def load_model(model_name):
     config = AutoConfig.from_pretrained(model_name)
     config.torchscript = True
     model = AutoModel.from_config(config)
-
     torch.set_grad_enabled(False)
+    return model
 
-    cuda_exist = torch.cuda.is_available()
-    device = torch.device("cuda" if cuda_exist and not cuda_available else "cpu")
-    model = model.eval().to(device)
-
-    return model, device
-
-def all_operations(model_name, cuda_available):
+def get_all_operations(model_name):
 
     """
     This function returns the class names of all operations used in a model
     """
 
-    model, _ = load_model(model_name, cuda_available)
+    model, _ = load_model(model_name)
 
     all_operations = set()
 
@@ -94,14 +87,16 @@ def all_operations(model_name, cuda_available):
 
     return all_operations
 
-def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
+def calibrate_e_ml(model_name, batch_size, input_len, use_cuda=True):
 
     """
     This function returns information about all the ML level operations in a model
     """
+    cuda_exist = torch.cuda.is_available()
+    device = torch.device("cuda" if cuda_exist and use_cuda else "cpu")
 
-    model, device = load_model(model_name, cuda_available)
-
+    model = load_model(model_name)
+    model = model.eval().to(device)
     for (name, module) in model.named_modules():
         if is_ml_operation(module):
             module.register_forward_pre_hook(log_start_builder(name))
@@ -127,8 +122,8 @@ def calibrate_e_ml(model_name, batch_size, input_len, cuda_available):
     return information
 
 def main(args):
-    operation_names = all_operations(args.model_name, args.no_cuda)
-    information = calibrate_e_ml(args.model_name, args.batch_size, args.input_len, args.no_cuda)
+    operation_names = get_all_operations(args.model_name)
+    information = calibrate_e_ml(args.model_name, args.batch_size, args.input_len, not args.no_cuda)
 
 if __name__ == '__main__':
     args = parse_args()
