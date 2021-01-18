@@ -5,21 +5,10 @@ __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 import argparse
 import bisect
 import json
-import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-logger = logging.getLogger('nrg')
-
-logger.setLevel(logging.INFO)
-fmt_str = "%(levelname)s:%(asctime)s.%(msecs)03d:%(pathname)s:%(lineno)d: " \
-          "%(message)s"
-fmt = logging.Formatter(fmt_str, "%Y-%m-%d_%H:%M:%S")
-handler = logging.StreamHandler()
-handler.setFormatter(fmt)
-logger.addHandler(handler)
 
 pd.set_option('display.float_format', '{:.6f}'.format)
 
@@ -62,8 +51,10 @@ def main(args):
     feature_names = ['batch_size', 'seq_len', 'flops',
                      'mem_bytes'] + res_names + [f'{k}_std'
                                                  for k in res_names] + \
-                    ['gpu_power_mean', 'gpu_power_std',
-                     'energy_mean', 'energy_std', 'level_name', ]
+                    ['times_mean', 'times_std',
+                     'gpu_power_mean', 'gpu_power_std',
+                     'energy_mean', 'energy_std',
+                     'level_name', 'model_name']
     feature_values = {k: [] for k in feature_names}
 
     for bs in list(range(2, batch_size, batch_step)) + [1]:
@@ -78,24 +69,28 @@ def main(args):
             for prof_item in prof_info:
                 gpu_power_runs = []
                 energy_runs = []
+                times_runs = []
                 res_runs = {k: [] for k in res_names}
                 for r in range(1, runs + 1):
-                    res_s = bisect.bisect_right(res_t, prof_item[f'start_{r}'])
-                    res_e = bisect.bisect_right(res_t, prof_item[f'end_{r}'])
+                    start_r = prof_item[f'start_{r}']
+                    end_r = prof_item[f'end_{r}']
+                    res_s = bisect.bisect_right(res_t, start_r)
+                    res_e = bisect.bisect_right(res_t, end_r)
                     res_r = res[res_s:res_e]
                     for rn in res_names:
                         res_runs[rn].append(res_r[rn].mean())
                     gpu_power_r = res_r['gpu_power'].sum()
                     gpu_power_runs.append(gpu_power_r)
 
-                    energy_s = bisect.bisect_right(energy_t,
-                                                   prof_item[f'start_{r}'])
-                    energy_e = bisect.bisect_right(energy_t,
-                                                   prof_item[f'end_{r}'])
+                    energy_s = bisect.bisect_right(energy_t, start_r)
+                    energy_e = bisect.bisect_right(energy_t, end_r)
 
                     energy_r = energy[energy_s:energy_e]['value'].sum()
                     energy_runs.append(energy_r)
+                    times_runs.append(end_r - start_r)
 
+                times_mean = np.mean(times_runs)
+                times_std = np.std(times_runs) / times_mean * 100
                 gpu_power_mean = np.mean(gpu_power_runs)
                 gpu_power_std = np.std(gpu_power_runs) / gpu_power_mean * 100
                 energy_mean = np.mean(energy_runs)
@@ -104,23 +99,30 @@ def main(args):
                     feature_values[rn].append(np.mean(res_runs[rn]))
                     rn_std = np.std(res_runs[rn]) / np.mean(res_runs[rn]) * 100
                     feature_values[f'{rn}_std'].append(rn_std)
+
+                flops = prof_item['flops'] / 1e6
+                mem_bytes = prof_item['mem_bytes'] / 1024 / 1024
                 feature_values['batch_size'].append(bs)
                 feature_values['seq_len'].append(seq_len)
                 feature_values['energy_mean'].append(energy_mean)
                 feature_values['energy_std'].append(energy_std)
                 feature_values['gpu_power_mean'].append(gpu_power_mean)
                 feature_values['gpu_power_std'].append(gpu_power_std)
-                feature_values['flops'].append(prof_item['flops'] / 1e6)
-                feature_values['mem_bytes'].append(prof_item['mem_bytes'] / 1e6)
+                feature_values['flops'].append(flops)
+                feature_values['mem_bytes'].append(mem_bytes)
+                feature_values['times_mean'].append(times_mean)
+                feature_values['times_std'].append(times_std)
                 feature_values['level_name'].append(prof_item['name'])
+                feature_values['model_name'].append(model_name)
+
                 print(f"b{bs},i{seq_len}:{prof_item['type']},"
                       f" {energy_std:.1f}%, {energy_mean / 10:.2f} J,"
-                      f" {prof_item['flops'] / 1e6:.2f} MFlops,"
-                      f" {prof_item['mem_bytes'] / 1024 / 1024:.2f} MiB,"
+                      f" {flops:.2f} MFlops,"
+                      f" {mem_bytes:.2f} MiB,"
                       f" {prof_item['name']}")
     info = pd.DataFrame(data=feature_values)
     info.to_csv(feature_file)
-    logger.info(f'{model_name} done.')
+    print(f'{model_name} done.')
 
 
 if __name__ == "__main__":
