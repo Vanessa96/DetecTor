@@ -59,9 +59,9 @@ def run_level(level, num_repeats, runs, device):
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
     if flops > 0:
-        # should in the range [100, 5e6]
+        # should in the range [100, 1e6]
         adjusted_repeats = max(num_repeats // (flops / 1e9), 100)
-        calibrated_repeats = int(min(adjusted_repeats, 5e6))
+        calibrated_repeats = int(min(adjusted_repeats, 1e6))
     # elif mem_bytes > 0:
     #     mem_mb = mem_bytes / 1024 / 1024
     #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
@@ -110,9 +110,9 @@ def main(args):
         filename = f'{model_name}_level_r{runs}_b{bs}_i{seq_len}.json'
         prof_info_file = out_dir.joinpath(filename)
         for level_type, levels in information.items():
-            # todo: support all ML levels
-            if level_type != 'linear':
-                continue
+            # # uncomment support specific ML levels
+            # if level_type != 'linear':
+            #     continue
             for level in levels:
                 prof_info = run_level(level, num_repeats, runs, device)
                 if prof_info is None:
