@@ -59,7 +59,9 @@ def run_level(level, num_repeats, runs, device):
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
     if flops > 0:
-        calibrated_repeats = int(num_repeats // (flops / 1e9))
+        # should in the range [100, 5e6]
+        adjusted_repeats = max(num_repeats // (flops / 1e9), 100)
+        calibrated_repeats = int(min(adjusted_repeats, 5e6))
     # elif mem_bytes > 0:
     #     mem_mb = mem_bytes / 1024 / 1024
     #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
