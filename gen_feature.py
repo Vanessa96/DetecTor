@@ -71,9 +71,12 @@ def main(args):
                 energy_runs = []
                 times_runs = []
                 res_runs = {k: [] for k in res_names}
+                repeats = prof_item['repeats']
                 for r in range(1, runs + 1):
                     start_r = prof_item[f'start_{r}']
                     end_r = prof_item[f'end_{r}']
+                    times_runs.append(end_r - start_r)
+
                     res_s = bisect.bisect_right(res_t, start_r)
                     res_e = bisect.bisect_right(res_t, end_r)
                     res_r = res[res_s:res_e]
@@ -82,12 +85,10 @@ def main(args):
                     gpu_power_r = res_r['gpu_power'].sum()
                     gpu_power_runs.append(gpu_power_r)
 
-                    energy_s = bisect.bisect_right(energy_t, start_r)
-                    energy_e = bisect.bisect_right(energy_t, end_r)
-
-                    energy_r = energy[energy_s:energy_e]['value'].sum()
+                    e_s = bisect.bisect_right(energy_t, start_r)
+                    e_e = bisect.bisect_right(energy_t, end_r)
+                    energy_r = energy[e_s:e_e]['value'].sum().div(repeats)
                     energy_runs.append(energy_r)
-                    times_runs.append(end_r - start_r)
 
                 times_mean = np.mean(times_runs)
                 times_std = np.std(times_runs) / times_mean * 100

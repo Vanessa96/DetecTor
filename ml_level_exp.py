@@ -58,16 +58,26 @@ def run_level(level, num_repeats, runs, device):
     sig = f"{level_type},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
+    if flops > 0:
+        calibrated_repeats = int(num_repeats // (flops / 1e9))
+    # elif mem_bytes > 0:
+    #     mem_mb = mem_bytes / 1024 / 1024
+    #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
+    else:
+        calibrated_repeats = num_repeats
+
     if sig in level_sigs:
         logger.info(f'already profiled {sig} level, skip')
         return None
     else:
         level_sigs.add(sig)
-    logger.info(f'{fname} flops={flops} mem_bytes={mem_bytes}')
+    level_prof['repeats'] = calibrated_repeats
+    logger.info(f'{fname} flops={flops} mem_bytes={mem_bytes}, '
+                f'repeats={calibrated_repeats}')
     for run in range(1, runs + 1):
         logger.info(f'run ({run}/{runs}) {fname} levels')
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
-        for _ in range(num_repeats):
+        for _ in range(calibrated_repeats):
             _ = fn(fi)
         level_end = time.clock_gettime(time.CLOCK_REALTIME)
         level_prof[f'start_{run}'] = level_start
