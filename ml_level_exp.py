@@ -59,9 +59,10 @@ def run_level(level, num_repeats, runs, device):
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
     if flops > 0:
-        # should in the range [100, 1e6]
+        # should in the range [100, 1e5]
+        # todo: better heuristics!
         adjusted_repeats = max(num_repeats // (flops / 1e9), 100)
-        calibrated_repeats = int(min(adjusted_repeats, 1e6))
+        calibrated_repeats = int(min(adjusted_repeats, 1e5))
     # elif mem_bytes > 0:
     #     mem_mb = mem_bytes / 1024 / 1024
     #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
@@ -119,6 +120,7 @@ def main(args):
                     continue
                 prof_info['type'] = level_type
                 model_prof_info.append(prof_info)
+                logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_type} done.')
         prof_info_file.write_text(json.dumps(model_prof_info))
         logger.info(f'{model_name} done.')
     logger.info('all done.')
