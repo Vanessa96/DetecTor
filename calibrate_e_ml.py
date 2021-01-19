@@ -94,7 +94,7 @@ def get_all_operations(model_name):
     This function returns the class names of all operations used in a model
     """
 
-    model, _ = load_model(model_name)
+    model = load_model(model_name)
 
     all_operations = set()
 
@@ -137,8 +137,13 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
 
 def main(args):
     operation_names = get_all_operations(args.model_name)
+    cuda_exist = torch.cuda.is_available()
+    device = torch.device("cuda" if cuda_exist and not cuda_available 
+                                    else "cpu")
     information = calibrate_e_ml(args.model_name, args.batch_size,
-                                 args.input_len, not args.no_cuda)
+                                 args.input_len, device)
+
+    import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
