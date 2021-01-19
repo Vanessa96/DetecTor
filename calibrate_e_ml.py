@@ -35,7 +35,13 @@ def parse_args():
     parser.add_argument('--model-name', type=str,
                         help='Huggingface model name to work with '
                              '(e.g. bert-base-uncased, distilbert-base-uncased,'
-                             ' google/mobilebert-uncased, roberta-base)',
+                             'google/mobilebert-uncased, roberta-base,'
+                             'bert-large-uncased, roberta-large,'
+                             'xlnet-base-cased, xlnet-large-cased,'
+                             'albert-base-v2, albert-large-v2, t5-small, t5-base,'
+                             'openai-gpt, gpt2, sshleifer/tiny-gpt2, distilgpt2'
+                             'sshleifer/tiny-ctrl, facebook/bart-base, facebook/bart-large,'
+                             'sshleifer/distilbart-xsum-6-6, valhalla/distilbart-mnli-12-3',
                         default='bert-base-uncased')
     parser.add_argument('--batch-size', type=int,
                         help='Batch size of input to run model with', default=1)
@@ -73,7 +79,7 @@ def is_ml_operation(module):
     """
 
     e_ml_operations = [nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d,
-                       nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.GRU]
+                       nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.Tanh]
 
     for e_ml_op in e_ml_operations:
         if isinstance(module, e_ml_op):
@@ -94,7 +100,7 @@ def get_all_operations(model_name):
     This function returns the class names of all operations used in a model
     """
 
-    model, _ = load_model(model_name)
+    model = load_model(model_name)
 
     all_operations = set()
 
@@ -119,7 +125,12 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
     inputs = torch.randint(1000, size=(batch_size, input_len)).long()
     inputs = inputs.to(device)
 
-    _ = model(input_ids=inputs, return_dict=True)
+    if 't5' in model_name:
+        labels = torch.randint(1000, size=(batch_size, input_len)).long()
+        labels = labels.to(device)
+        _ = model(input_ids=inputs, decoder_input_ids=labels, return_dict=True)
+    else:
+        _ = model(input_ids=inputs, return_dict=True)
 
     information = defaultdict(list)
     for module_name in start_times.keys():
@@ -137,8 +148,13 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
 
 def main(args):
     operation_names = get_all_operations(args.model_name)
+    cuda_exist = torch.cuda.is_available()
+    device = torch.device("cuda" if cuda_exist and not cuda_available 
+                                    else "cpu")
     information = calibrate_e_ml(args.model_name, args.batch_size,
-                                 args.input_len, not args.no_cuda)
+                                 args.input_len, device)
+
+    import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
