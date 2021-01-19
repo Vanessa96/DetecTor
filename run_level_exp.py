@@ -151,8 +151,8 @@ def main(args):
         logger.info(f'profiling {model_name} ml levels on {device}...')
         information = calibrate_e_ml(model_name, bs, seq_len, device)
         model_prof_info = []
-        model_name = sanitize(model_name)
-        filename = f'{model_name}_{exp_type}_r{runs}_b{bs}_i{seq_len}.json'
+        model_name_s = sanitize(model_name)
+        filename = f'{model_name_s}_{exp_type}_r{runs}_b{bs}_i{seq_len}.json'
         prof_info_file = out_dir.joinpath(filename)
         if exp_type == 'ml':
             for level_type, levels in information.items():

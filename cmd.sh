@@ -17,15 +17,8 @@ for b in `seq 32 -8 8` 1; do
 done
 
 for b in `seq 32 -8 8` 1; do
-  for i in `seq 512 -32 32`; do
+  for i in `seq 256 -32 32`; do
     echo ${i},${b}=$(($i * $b))
-    python run_level_exp.py -t model -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 1000 2>&1 | tee data/nrg-b${b}-i${i}.log
-  done
-done
-
-for b in `seq 32 -8 8` 1; do
-  for i in `seq 512 -32 32`; do
-    echo ${i},${b}=$(($i * $b))
-    python run_level_exp.py -t ml -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-b${b}-i${i}.log
+    python run_level_exp.py -t model -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 100 2>&1 | tee data/nrg-b${b}-i${i}.log
   done
 done
