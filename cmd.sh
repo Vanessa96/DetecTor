@@ -9,18 +9,16 @@ python bench_model.py -p -o data/models -r 10 -b 32 -i 256 -m openai-gpt gpt2 ss
 
 python bench_model.py -p -o data/models -r 10 -b 32 -i 256 -m facebook/bart-base facebook/bart-large sshleifer/distilbart-xsum-6-6 valhalla/distilbart-mnli-12-3 t5-small 2>&1 | tee data/bench-seq2seq.log
 
-python ml_level_exp.py -o data/mlexp -r 10 -b 16 -i 384 -m "prajjwal1/bert-tiny" -n 10000 2>&1 | tee data/ml-exp2.log
-
-for b in `seq 32 -2 2` 1; do
-  for i in `seq 384 -16 16`; do
-    echo ${i},${b}=$(($i * $b))
-    python ml_level_exp.py -o data/mlexp -r 10 -b ${b} -i ${i} -m "bert-base-uncased" -n 10000 2>&1 | tee data/ml-exp-linear-bert-tiny-b${b}-i${i}.log
-  done
-done
-
 for b in `seq 32 -8 8` 1; do
   for i in `seq 512 -32 32`; do
     echo ${i},${b}=$(($i * $b))
-    python ml_level_exp.py -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-b${b}-i${i}.log
+    python run_level_exp.py -t level -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-b${b}-i${i}.log
+  done
+done
+
+for b in `seq 16 -8 8` 1; do
+  for i in `seq 64 -32 32`; do
+    echo ${i},${b}=$(($i * $b))
+    python run_level_exp.py -t model -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 1000 2>&1 | tee data/nrg-b${b}-i${i}.log
   done
 done
