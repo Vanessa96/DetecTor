@@ -9,3 +9,8 @@ fmt = logging.Formatter(fmt_str, "%Y-%m-%d_%H:%M:%S")
 handler = logging.StreamHandler()
 handler.setFormatter(fmt)
 logger.addHandler(handler)
+
+
+def sanitize(model_name):
+    # todo: more robust name sanitization
+    return model_name.replace('/', '_')
