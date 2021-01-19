@@ -11,18 +11,7 @@ import torch
 
 from calibrate_e_ml import calibrate_e_ml
 from cg.node import construct_aggregation_graph
-
-import logging
-
-logger = logging.getLogger('nrg')
-
-logger.setLevel(logging.INFO)
-fmt_str = "%(levelname)s:%(asctime)s.%(msecs)03d:%(pathname)s:%(lineno)d: " \
-          "%(message)s"
-fmt = logging.Formatter(fmt_str, "%Y-%m-%d_%H:%M:%S")
-handler = logging.StreamHandler()
-handler.setFormatter(fmt)
-logger.addHandler(handler)
+from common import logger
 
 
 def get_flops_mem_bytes(graph):

@@ -18,9 +18,9 @@ for b in `seq 32 -2 2` 1; do
   done
 done
 
-for b in `seq 32 -2 2` 1; do
-  for i in `seq 512 -16 16`; do
+for b in `seq 32 -8 8` 1; do
+  for i in `seq 512 -32 32`; do
     echo ${i},${b}=$(($i * $b))
-    python ml_level_exp.py -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "prajjwal1/bert-tiny" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-exp-b${b}-i${i}.log
+    python ml_level_exp.py -o data/mlexp -r 5 -b ${b} -i ${i} -m "bert-base-uncased" "distilbert-base-uncased" "google/mobilebert-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-b${b}-i${i}.log
   done
 done
