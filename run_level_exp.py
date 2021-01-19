@@ -86,8 +86,8 @@ def run_model(model_name, bs, seq_len, num_repeats, runs, device):
 level_sigs = set()
 
 
-def run_level(model_name, bs, seq_len, num_repeats, runs, device,
-              level, level_type):
+def run_ml(model_name, bs, seq_len, num_repeats, runs, device,
+           level, level_type):
     # # uncomment support specific ML levels
     # if level_type != 'linear':
     #     return None
@@ -154,12 +154,12 @@ def main(args):
         model_name = sanitize(model_name)
         filename = f'{model_name}_{exp_type}_r{runs}_b{bs}_i{seq_len}.json'
         prof_info_file = out_dir.joinpath(filename)
-        if exp_type == 'level':
+        if exp_type == 'ml':
             for level_type, levels in information.items():
                 for level in levels:
-                    prof_info = run_level(model_name, bs, seq_len,
-                                          num_repeats, runs, device,
-                                          level, level_type)
+                    prof_info = run_ml(model_name, bs, seq_len,
+                                       num_repeats, runs, device,
+                                       level, level_type)
                     if prof_info is None:
                         continue
                     prof_info['type'] = level_type
