@@ -19,14 +19,13 @@ cuda 10.2 cudnn 8.0.3
 
 `pyenv deactivate`
 
-## Usage
+setup OpenEnergyMonitor, see `emonpi/readme.md`
+compile resources profiler, `cd rpof && make`
 
-### WattsUp Meter Logger
+### Usage
 
-This is hardware based methodology, it's more accurate and reliable.
-- `pip install pyserial numpy matplotlib PyQt5`
-- plug in the usb to your computer, then `sudo chown $USER /dev/ttyUSB0`
+for every experiment, start the energy monitor first (`python energy_monitor.py -o energy.csv`)
 
-- log energy: `python wattsup.py -l -o sample.log`
+then `cd rpof; ./rprof 170 res.csv 50` means profile every 170 ms for 50s
 
-- plot energy: `python plot.py sample.log sample.png`
+last, start run the model exp script like in `cmd.sh`

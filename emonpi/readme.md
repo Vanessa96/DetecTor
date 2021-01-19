@@ -30,34 +30,4 @@ also see `https://github.com/csarron/emonpi` if for any reason the above change 
 
 `pip install pyserial==3.4`
 
-run `python rs.py`
-
-the script content is below, feel free to modify them as needed.
-
-```python
-#!/usr/bin/python
-import serial
-
-from datetime import datetime
-
-ser = serial.Serial('/dev/ttyAMA0', 38400)
-
-ser.write(b'f10') # change no_of_half_wavelengths to 10
-# ser.write(b'f20')
-# ser.write(b'c1') # monitor ct1
-try:
-  while True:
-    response = ser.readline()
-  #  z = response.split(" ")
-    try:
-      print("{},{}".format(datetime.now(), response.decode().strip()))
-    except UnicodeDecodeError as e:
-      print(e, 'decode error, skip')
-      continue
-    # print("{}\n".format(datetime.now()))
-    print()
-
-except KeyboardInterrupt:
-  ser.close()
-
-```
+https://github.com/csarron/emonpi/blob/master/firmware/energy_monitor.py
