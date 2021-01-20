@@ -37,17 +37,19 @@ def get_model_flops_mem_bytes(module_fn, inputs, module_name):
     return flops, mem_bytes
 
 
-def calibrate_repeats(flops, repeats):
+def calibrate_repeats(flops, level_type, repeats):
     if flops > 0:
-        # should in the range [100, 1e5]
+        # should in the range [100, 1e6]
         # todo: better heuristics!
         adjusted_repeats = max(repeats // (flops / 1e9), 100)
-        calibrated_repeats = int(min(adjusted_repeats, 1e5))
+        calibrated_repeats = int(min(adjusted_repeats, 1e6))
     # elif mem_bytes > 0:
     #     mem_mb = mem_bytes / 1024 / 1024
     #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
     else:
         calibrated_repeats = repeats
+    if level_type == 'embedding':
+        calibrated_repeats *= 10
     return calibrated_repeats
 
 
@@ -104,7 +106,7 @@ def run_ml(model_name, bs, seq_len, num_repeats, runs, device,
     sig = f"{level_type},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
-    calibrated_repeats = calibrate_repeats(flops, num_repeats)
+    calibrated_repeats = calibrate_repeats(flops, level_type, num_repeats)
 
     if sig in level_sigs:
         logger.info(f'already profiled {sig} level, skip')
