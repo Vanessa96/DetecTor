@@ -106,16 +106,21 @@ def get_all_operations(model_name):
     return all_operations
 
 
-def calibrate_e_ml(model_name, batch_size, input_len, device):
-    """
-    This function returns information about all the ML level operations in a model
-    """
+def is_level_module(level_type, module):
+    if level_type == 'ml':
+        return is_ml_operation(module)
+    else:
+        # this return model level
+        # todo: need to return non-parametric ml level
+        return not is_ml_operation(module)
+
+
+def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     model = load_model(model_name)
     model = model.eval().to(device)
     for (name, module) in model.named_modules():
-        if is_ml_operation(module):
-            # module.register_forward_pre_hook(log_start_builder(name))
-            module.register_forward_hook(log_end_builder(name))
+        # module.register_forward_pre_hook(log_start_builder(name))
+        module.register_forward_hook(log_end_builder(name))
 
     inputs = torch.randint(1000, size=(batch_size, input_len)).long()
     inputs = inputs.to(device)
@@ -129,14 +134,16 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
 
     information = defaultdict(list)
     for module_name in start_times.keys():
-        module_info = {'name': module_name, 'module': modules[module_name],
-                       'inputs': module_inputs[module_name],
-                       'outputs': module_outputs[module_name],
-                       'runtime': end_times[module_name] - start_times[
-                           module_name]}
+        module = modules[module_name]
+        if is_level_module(level_type, module):
+            module_info = {'name': module_name, 'module': modules[module_name],
+                           'inputs': module_inputs[module_name],
+                           'outputs': module_outputs[module_name],
+                           'runtime': end_times[module_name] - start_times[
+                               module_name]}
 
-        module_identifier = module_name.split(':')[-1]
-        information[module_identifier].append(module_info)
+            module_identifier = module_name.split(':')[-1]
+            information[module_identifier].append(module_info)
 
     return information
 
@@ -145,7 +152,7 @@ def main(args):
     operation_names = get_all_operations(args.model_name)
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
-    information = calibrate_e_ml(args.model_name, args.batch_size,
+    information = get_module_info(args.model_name, args.batch_size,
                                  args.input_len, device)
 
 

@@ -11,7 +11,7 @@ import torch
 from transformers import AutoConfig
 from transformers import AutoModel
 
-from calibrate_e_ml import calibrate_e_ml
+from calibrate_e_ml import get_module_info
 from cg.node import construct_aggregation_graph
 from common import logger
 from common import sanitize
@@ -37,7 +37,7 @@ def get_model_flops_mem_bytes(module_fn, inputs, module_name):
     return flops, mem_bytes
 
 
-def calibrate_repeats(flops, level_type, repeats):
+def calibrate_repeats(flops, level_name, repeats):
     if flops > 0:
         # should in the range [100, 1e6]
         # todo: better heuristics!
@@ -48,7 +48,7 @@ def calibrate_repeats(flops, level_type, repeats):
     #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
     else:
         calibrated_repeats = repeats
-    if level_type == 'embedding':
+    if level_name == 'embedding':
         calibrated_repeats *= 10
     return calibrated_repeats
 
@@ -88,10 +88,10 @@ def run_model(model_name, bs, seq_len, num_repeats, runs, device):
 level_sigs = set()
 
 
-def run_ml(model_name, bs, seq_len, num_repeats, runs, device,
-           level, level_type):
+def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs, device,
+                     level, level_name):
     # # uncomment support specific ML levels
-    # if level_type != 'linear':
+    # if level_name != 'linear':
     #     return None
     fn = level['module']
     fname = level['name']
@@ -103,10 +103,10 @@ def run_ml(model_name, bs, seq_len, num_repeats, runs, device,
         fi = torch.rand(fi_size, dtype=fi_dtype, device=device)
     # fo = torch.rand(fo_size, dtype=fo_dtype)
     flops, mem_bytes = get_model_flops_mem_bytes(fn, fi, fname)
-    sig = f"{level_type},{flops},{mem_bytes}"
+    sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
-    calibrated_repeats = calibrate_repeats(flops, level_type, num_repeats)
+    calibrated_repeats = calibrate_repeats(flops, level_name, num_repeats)
 
     if sig in level_sigs:
         logger.info(f'already profiled {sig} level, skip')
@@ -114,11 +114,11 @@ def run_ml(model_name, bs, seq_len, num_repeats, runs, device,
     else:
         level_sigs.add(sig)
     level_prof['repeats'] = calibrated_repeats
-    logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_type}, '
+    logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_name}, '
                 f'flops={flops}, mem_bytes={mem_bytes}, '
                 f'repeats={calibrated_repeats}, {fname}')
     for run in range(1, runs + 1):
-        logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_type}, '
+        logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_name}, '
                     f'({run}/{runs}) {fname} levels')
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
         for _ in range(calibrated_repeats):
@@ -128,12 +128,6 @@ def run_ml(model_name, bs, seq_len, num_repeats, runs, device,
         level_prof[f'end_{run}'] = level_end
         time.sleep(1)  # sleep 1s to cool down
     return level_prof
-
-
-def run_module(model_name, bs, seq_len, num_repeats, runs, device):
-    # todo module level exp
-    module_prof = dict()
-    return module_prof
 
 
 def main(args):
@@ -148,32 +142,29 @@ def main(args):
     device = torch.device("cuda" if cuda_exist and use_cuda else "cpu")
     seq_len = args.input_length
     bs = args.batch_size
-    exp_type = args.exp_type
+    level_type = args.level_type
     for model_name in args.models:
         logger.info(f'profiling {model_name} ml levels on {device}...')
-        information = calibrate_e_ml(model_name, bs, seq_len, device)
+        information = get_module_info(model_name, bs, seq_len, device,
+                                      level_type)
         model_prof_info = []
         model_name_s = sanitize(model_name)
-        filename = f'{model_name_s}_{exp_type}_r{runs}_b{bs}_i{seq_len}.json'
+        filename = f'{model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len}.json'
         prof_info_file = out_dir.joinpath(filename)
-        if exp_type == 'ml':
-            for level_type, levels in information.items():
-                for level in levels:
-                    prof_info = run_ml(model_name, bs, seq_len,
-                                       num_repeats, runs, device,
-                                       level, level_type)
-                    if prof_info is None:
-                        continue
-                    prof_info['type'] = level_type
-                    model_prof_info.append(prof_info)
-        elif exp_type == 'model':
+        if level_type == 'model':
             prof_info = run_model(model_name, bs, seq_len,
                                   num_repeats, runs, device)
             model_prof_info.append(prof_info)
         else:
-            prof_info = run_module(model_name, bs, seq_len,
-                                   num_repeats, runs, device)
-            model_prof_info.append(prof_info)
+            for level_name, levels in information.items():
+                for level in levels:
+                    prof_info = run_ml_or_module(model_name, bs, seq_len,
+                                                 num_repeats, runs, device,
+                                                 level, level_name)
+                    if prof_info is None:
+                        continue
+                    prof_info['type'] = level_name
+                    model_prof_info.append(prof_info)
         prof_info_file.write_text(json.dumps(model_prof_info))
         logger.info(f'{model_name} done.')
     logger.info('all done.')
@@ -183,7 +174,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--out_dir", type=str, required=True,
                         help="output dir")
-    parser.add_argument("-t", "--exp_type", type=str, required=True,
+    parser.add_argument("-t", "--level_type", type=str, required=True,
                         choices=('ml', 'module', 'model'),
                         help="ml, module, model type")
     parser.add_argument("-b", "--batch_size", type=int, default=16,
