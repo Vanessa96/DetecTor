@@ -95,12 +95,12 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs, device,
     #     return None
     fn = level['module']
     fname = level['name']
-    fi_size, fi_dtype = level['inputs']
+    fi = level['inputs'][0]
     # fo_size, fo_dtype = level['outputs']
-    if fi_dtype in (torch.int32, torch.int64, torch.long):
-        fi = torch.zeros(fi_size, dtype=fi_dtype, device=device)
-    else:
-        fi = torch.rand(fi_size, dtype=fi_dtype, device=device)
+    # if fi_dtype in (torch.int32, torch.int64, torch.long):
+    #     fi = torch.zeros(fi_size, dtype=fi_dtype, device=device)
+    # else:
+    #     fi = torch.rand(fi_size, dtype=fi_dtype, device=device)
     # fo = torch.rand(fo_size, dtype=fo_dtype)
     flops, mem_bytes = get_model_flops_mem_bytes(fn, fi, fname)
     sig = f"{level_name},{flops},{mem_bytes}"
@@ -144,7 +144,7 @@ def main(args):
     bs = args.batch_size
     level_type = args.level_type
     for model_name in args.models:
-        logger.info(f'profiling {model_name} ml levels on {device}...')
+        logger.info(f'profiling {model_name} {level_type} on {device}...')
         information = get_module_info(model_name, bs, seq_len, device,
                                       level_type)
         model_prof_info = []

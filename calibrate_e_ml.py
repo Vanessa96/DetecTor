@@ -57,11 +57,10 @@ def parse_args():
 def log_end_builder(name):
     def log_end(module, m_in, m_out):
         end_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
-        module_inputs[f'{name}:{module.__class__.__name__}'] = (
-            m_in[0].shape, m_in[0].dtype)
-        module_outputs[f'{name}:{module.__class__.__name__}'] = (
-            m_out.shape, m_out.dtype)
-        modules[f'{name}:{module.__class__.__name__}'] = module
+        if m_in:
+            module_inputs[f'{name}:{module.__class__.__name__}'] = m_in
+            module_outputs[f'{name}:{module.__class__.__name__}'] = m_out
+            modules[f'{name}:{module.__class__.__name__}'] = module
 
     return log_end
 
@@ -78,6 +77,14 @@ def is_ml_operation(module):
 
     for e_ml_op in e_ml_operations:
         if isinstance(module, e_ml_op):
+            return True
+    return False
+
+
+def is_ignore_operation(module):
+    ignore_operations = {nn.Dropout, }
+    for e in ignore_operations:
+        if isinstance(module, e):
             return True
     return False
 
@@ -119,7 +126,11 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     model = load_model(model_name)
     model = model.eval().to(device)
     for (name, module) in model.named_modules():
+        if not name:
+            continue
         # module.register_forward_pre_hook(log_start_builder(name))
+        if is_ignore_operation(module):
+            continue
         module.register_forward_hook(log_end_builder(name))
 
     inputs = torch.randint(1000, size=(batch_size, input_len)).long()
@@ -133,14 +144,17 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
         _ = model(input_ids=inputs, return_dict=True)
 
     information = defaultdict(list)
-    for module_name in start_times.keys():
+    for module_name in end_times.keys():
+        if module_name not in modules:
+            continue
         module = modules[module_name]
         if is_level_module(level_type, module):
             module_info = {'name': module_name, 'module': modules[module_name],
                            'inputs': module_inputs[module_name],
-                           'outputs': module_outputs[module_name],
-                           'runtime': end_times[module_name] - start_times[
-                               module_name]}
+                           # 'outputs': module_outputs[module_name],
+                           # 'runtime': end_times[module_name] - start_times[
+                           # module_name]
+                           }
 
             module_identifier = module_name.split(':')[-1]
             information[module_identifier].append(module_info)
@@ -153,7 +167,7 @@ def main(args):
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
     information = get_module_info(args.model_name, args.batch_size,
-                                 args.input_len, device)
+                                  args.input_len, device)
 
 
 if __name__ == '__main__':
