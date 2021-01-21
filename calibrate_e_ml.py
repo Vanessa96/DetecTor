@@ -154,8 +154,6 @@ def main(args):
     information = calibrate_e_ml(args.model_name, args.batch_size,
                                  args.input_len, device)
 
-    import pdb; pdb.set_trace()
-
 
 if __name__ == '__main__':
     args = parse_args()
