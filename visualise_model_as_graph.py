@@ -13,18 +13,9 @@ from transformers import AutoConfig
 from transformers import AutoModel
 from cg.node import construct_aggregation_graph
 from run_level_exp import construct_aggregation_graph
-from ete3 import Tree
 import toytree
-
-class TestNet(nn.Module):
-    def __init__(self):
-        super(TestNet, self).__init__()
-        self.output = nn.Linear(256, 10)
-
-    def forward(self, x):
-        x = self.output(x)
-        x = nn.Softmax(dim=-1)(x)
-        return x
+import toyplot
+import toyplot.pdf
 
 class TreeNode(object):
     def __init__(self, scope, instance_type, level, parent_name, callable_module):
@@ -36,9 +27,9 @@ class TreeNode(object):
         self.callable_module = callable_module
 
     def __str__(self):
-        ret = "(" + self.scope.split('.')[-1] + ","
+        ret = "(" + self.scope.split('.')[-1] # + "_" + self.instance_type
         for child in self.child_nodes:
-            ret += child.__str__()
+            ret += "," + child.__str__()
         ret += ")"
         return ret
 
@@ -125,14 +116,11 @@ def create_tree_from_modules(model):
 def run_model(model_name, device, out_file):
     model = load_model(model_name)
     inputs = torch.randint(1000, size=(16, 256)).long()
-    # model = TestNet()
-    # inputs = torch.randint(1000, size=(16, 256)).float()
     model = model.eval().to(device)
     inputs = inputs.to(device)
 
     trace = torch.jit.trace(model, inputs)
     trace_graph = trace.inlined_graph
-    # graph, _ = construct_aggregation_graph(trace_graph, 'testnet')
     graph, _ = construct_aggregation_graph(trace_graph, model_name)
 
     # dict1 - id to node
@@ -148,8 +136,9 @@ def run_model(model_name, device, out_file):
 
     root, tree = create_tree_from_modules(model)
 
-    viz_tree = toytree.tree(root.__str__()+';', tree_format=8)
-    canvas, axes, mark = viz_tree.draw(width=400, height=300)
+    viz_tree = toytree.tree(root.__str__()+';', tree_format=9)
+    canvas, axes, mark = viz_tree.draw(layout='d')
+    toyplot.pdf.render(canvas, args.out_file)
 
 def main(args):
     cuda_exist = torch.cuda.is_available()
