@@ -113,15 +113,6 @@ def create_tree_from_modules(model):
 
     return root, tree
 
-def get_correct_node(root, scope):
-
-    if root == None:
-        return
-    if root.scope == scope:
-        return root
-    for child in root.child_nodes:
-        get_correct_node(child, scope)
-
 def run_model(model_name, device, out_file):
     model = load_model(model_name)
     inputs = torch.randint(1000, size=(16, 256)).long()
