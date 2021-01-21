@@ -27,7 +27,7 @@ class TreeNode(object):
         self.callable_module = callable_module
 
     def __str__(self):
-        ret = "(" + self.scope.split('.')[-1] # + "_" + self.instance_type
+        ret = "(" + self.scope.split('.')[-1]
         for child in self.child_nodes:
             ret += "," + child.__str__()
         ret += ")"
@@ -113,6 +113,15 @@ def create_tree_from_modules(model):
 
     return root, tree
 
+def get_correct_node(root, scope):
+
+    if root == None:
+        return
+    if root.scope == scope:
+        return root
+    for child in root.child_nodes:
+        get_correct_node(child, scope)
+
 def run_model(model_name, device, out_file):
     model = load_model(model_name)
     inputs = torch.randint(1000, size=(16, 256)).long()
@@ -123,8 +132,6 @@ def run_model(model_name, device, out_file):
     trace_graph = trace.inlined_graph
     graph, _ = construct_aggregation_graph(trace_graph, model_name)
 
-    # dict1 - id to node
-    # dict2 - scope to list of ids
     id_to_node_map = dict()
     scope_to_node_ids_map = defaultdict(list)
     for node in graph.nodes:
@@ -135,6 +142,19 @@ def run_model(model_name, device, out_file):
         scope_to_node_ids_map[node_scope].append(node.id)
 
     root, tree = create_tree_from_modules(model)
+
+    for scope, node_ids in scope_to_node_ids_map.items():
+        for node_id in node_ids:
+            jit_node = id_to_node_map[node_id]
+            if jit_node.mem_bytes != 0 or jit_node.flops != 0:
+                if jit_node.scope == '':
+                    scope_to_match = 'root'
+                else:
+                    scope_to_match = 'root.' + jit_node.scope
+                node_in_position = tree[scope_to_match]
+                new_scope_name = scope_to_match + '.' + jit_node.op.split('::')[-1]
+                new_node = TreeNode(new_scope_name, jit_node.op.split('::')[-1], node_in_position.level+1, node_in_position.scope, jit_node.op)
+                node_in_position.child_nodes.append(new_node)
 
     viz_tree = toytree.tree(root.__str__()+';', tree_format=9)
     canvas, axes, mark = viz_tree.draw(layout='d')
