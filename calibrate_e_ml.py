@@ -54,13 +54,6 @@ def parse_args():
     return args
 
 
-def log_start_builder(name):
-    def log_start(module, m_in):
-        start_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
-
-    return log_start
-
-
 def log_end_builder(name):
     def log_end(module, m_in, m_out):
         end_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
@@ -79,9 +72,9 @@ def is_ml_operation(module):
     we want to analyse for E_ML operations
     """
 
-    e_ml_operations = [nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d,
+    e_ml_operations = {nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d,
                        nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.Tanh,
-                       modeling_utils.Conv1D]
+                       modeling_utils.Conv1D}
 
     for e_ml_op in e_ml_operations:
         if isinstance(module, e_ml_op):
@@ -121,7 +114,7 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
     model = model.eval().to(device)
     for (name, module) in model.named_modules():
         if is_ml_operation(module):
-            module.register_forward_pre_hook(log_start_builder(name))
+            # module.register_forward_pre_hook(log_start_builder(name))
             module.register_forward_hook(log_end_builder(name))
 
     inputs = torch.randint(1000, size=(batch_size, input_len)).long()
@@ -151,12 +144,10 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
 def main(args):
     operation_names = get_all_operations(args.model_name)
     cuda_exist = torch.cuda.is_available()
-    device = torch.device("cuda" if cuda_exist and not cuda_available 
-                                    else "cpu")
+    device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
     information = calibrate_e_ml(args.model_name, args.batch_size,
                                  args.input_len, device)
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    main(args)
+    main(parse_args())
