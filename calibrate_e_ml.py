@@ -22,6 +22,7 @@ import torch
 from torch import nn
 from transformers import AutoConfig
 from transformers import AutoModel
+from transformers import modeling_utils
 
 start_times = dict()
 end_times = dict()
@@ -79,7 +80,8 @@ def is_ml_operation(module):
     """
 
     e_ml_operations = [nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d,
-                       nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.Tanh]
+                       nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.Tanh,
+                       modeling_utils.Conv1D]
 
     for e_ml_op in e_ml_operations:
         if isinstance(module, e_ml_op):
@@ -141,7 +143,7 @@ def calibrate_e_ml(model_name, batch_size, input_len, device):
                            module_name]}
 
         module_identifier = module_name.split(':')[-1]
-        information[module_identifier.lower()].append(module_info)
+        information[module_identifier].append(module_info)
 
     return information
 
