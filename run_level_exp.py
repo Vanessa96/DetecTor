@@ -143,12 +143,7 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
     for run in range(1, runs + 1):
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
         for _ in range(calibrated_repeats):
-            if isinstance(fi, tuple):
-                _ = fn(*fi)
-            elif isinstance(fi, dict):
-                _ = fn(**fi)
-            else:
-                logger.warning(f'{type(fi)}')
+            _ = fn(*fi, **fi_kwargs)
         level_end = time.clock_gettime(time.CLOCK_REALTIME)
         level_prof[f'start_{run}'] = level_start
         level_prof[f'end_{run}'] = level_end
