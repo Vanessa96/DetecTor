@@ -171,6 +171,24 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     return information
 
 
+def print_info(information):
+    for k, info in information.items():
+        print(k, len(info))
+        infoi = info[0]
+        ii = infoi['inputs']
+        ii_kwargs = infoi['in_kwargs']
+        if ii_kwargs:
+            print(type(ii_kwargs), infoi['name'],
+                  {iik: v.shape if isinstance(v, torch.Tensor) else v
+                   for iik, v in ii_kwargs.items()})
+        if ii:
+            print(type(ii), infoi['name'],
+                  [v.shape if isinstance(v, torch.Tensor) else v
+                   for v in ii])
+
+        print()
+
+
 def main(args):
     operation_names = get_all_operations(args.model_name)
     cuda_exist = torch.cuda.is_available()
