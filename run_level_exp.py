@@ -5,16 +5,17 @@ __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 import argparse
 import json
 import time
+from functools import partial
+from functools import update_wrapper
 from pathlib import Path
-
+from common import logger
+from common import sanitize
 import torch
 from transformers import AutoConfig
 from transformers import AutoModel
 
 from calibrate_e_ml import get_module_info
 from cg.node import construct_aggregation_graph
-from common import logger
-from common import sanitize
 
 
 def get_flops_mem_bytes(graph):
@@ -88,21 +89,38 @@ def run_model(model_name, bs, seq_len, num_repeats, runs, device):
 level_sigs = set()
 
 
-def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs, device,
+def wrapped_partial(func, *args, **kwargs):
+    partial_func = partial(func, *args, **kwargs)
+    update_wrapper(partial_func, func)
+    return partial_func
+
+
+def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
                      level, level_name):
     # # uncomment support specific ML levels
     # if level_name != 'linear':
     #     return None
     fn = level['module']
     fname = level['name']
-    fi = level['inputs'][0]
-    # fo_size, fo_dtype = level['outputs']
-    # if fi_dtype in (torch.int32, torch.int64, torch.long):
-    #     fi = torch.zeros(fi_size, dtype=fi_dtype, device=device)
-    # else:
-    #     fi = torch.rand(fi_size, dtype=fi_dtype, device=device)
-    # fo = torch.rand(fo_size, dtype=fo_dtype)
-    flops, mem_bytes = get_model_flops_mem_bytes(fn, fi, fname)
+    fi = level['inputs']
+
+    # separate tensor args and rest from fi
+    # fixme: for now, tensor args are ordered first,
+    #  if not, need another solution,  (not true for roberta)
+    if isinstance(fi, dict):
+        ti = [t for t in fi.values() if isinstance(t, torch.Tensor)]
+        ri = {rk: r for rk, r in fi.items() if not isinstance(r, torch.Tensor)}
+        # https://github.com/pytorch/pytorch/issues/14455#issuecomment-445962680
+        fn.forward = wrapped_partial(fn.forward, **ri)
+    elif isinstance(fi, tuple):
+        ti = [t for t in fi if isinstance(t, torch.Tensor)]
+        ri = [r for r in fi if not isinstance(r, torch.Tensor)]
+        fn.forward = wrapped_partial(fn.forward, *ri)
+    else:
+        # unknown type
+        ti = fi
+        logger.warning(f'unknown fi: {type(fi)}')
+    flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname)
     sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
@@ -122,7 +140,12 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs, device,
                     f'({run}/{runs}) {fname} levels')
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
         for _ in range(calibrated_repeats):
-            _ = fn(fi)
+            if isinstance(fi, tuple):
+                _ = fn(*fi)
+            elif isinstance(fi, dict):
+                _ = fn(**fi)
+            else:
+                logger.warning(f'{type(fi)}')
         level_end = time.clock_gettime(time.CLOCK_REALTIME)
         level_prof[f'start_{run}'] = level_start
         level_prof[f'end_{run}'] = level_end
@@ -159,7 +182,7 @@ def main(args):
             for level_name, levels in information.items():
                 for level in levels:
                     prof_info = run_ml_or_module(model_name, bs, seq_len,
-                                                 num_repeats, runs, device,
+                                                 num_repeats, runs,
                                                  level, level_name)
                     if prof_info is None:
                         continue

@@ -55,12 +55,16 @@ def parse_args():
 
 
 def log_end_builder(name):
-    def log_end(module, m_in, m_out):
+    def log_end(module, m_in, m_in_kwargs, m_out):
+        # fixme: patch/mock method register_forward_hook in nn.Module
         end_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
         if m_in:
             module_inputs[f'{name}:{module.__class__.__name__}'] = m_in
-            module_outputs[f'{name}:{module.__class__.__name__}'] = m_out
-            modules[f'{name}:{module.__class__.__name__}'] = module
+        else:
+            # m_in is empty
+            module_inputs[f'{name}:{module.__class__.__name__}'] = m_in_kwargs
+        module_outputs[f'{name}:{module.__class__.__name__}'] = m_out
+        modules[f'{name}:{module.__class__.__name__}'] = module
 
     return log_end
 
@@ -125,6 +129,11 @@ def is_level_module(level_type, module):
 def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     model = load_model(model_name)
     model = model.eval().to(device)
+    start_times.clear()
+    end_times.clear()
+    module_inputs.clear()
+    module_outputs.clear()
+    modules.clear()
     for (name, module) in model.named_modules():
         if not name:
             continue
@@ -139,9 +148,9 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     if 't5' in model_name:
         labels = torch.randint(1000, size=(batch_size, input_len)).long()
         labels = labels.to(device)
-        _ = model(input_ids=inputs, decoder_input_ids=labels, return_dict=True)
+        _ = model(input_ids=inputs, decoder_input_ids=labels)
     else:
-        _ = model(input_ids=inputs, return_dict=True)
+        _ = model(input_ids=inputs)
 
     information = defaultdict(list)
     for module_name in end_times.keys():
