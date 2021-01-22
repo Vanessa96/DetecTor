@@ -27,6 +27,7 @@ from transformers import modeling_utils
 start_times = dict()
 end_times = dict()
 module_inputs = dict()
+module_in_kwargs = dict()
 module_outputs = dict()
 modules = dict()
 
@@ -58,11 +59,8 @@ def log_end_builder(name):
     def log_end(module, m_in, m_in_kwargs, m_out):
         # fixme: patch/mock method register_forward_hook in nn.Module
         end_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
-        if m_in:
-            module_inputs[f'{name}:{module.__class__.__name__}'] = m_in
-        else:
-            # m_in is empty
-            module_inputs[f'{name}:{module.__class__.__name__}'] = m_in_kwargs
+        module_inputs[f'{name}:{module.__class__.__name__}'] = m_in
+        module_in_kwargs[f'{name}:{module.__class__.__name__}'] = m_in_kwargs
         module_outputs[f'{name}:{module.__class__.__name__}'] = m_out
         modules[f'{name}:{module.__class__.__name__}'] = module
 
@@ -132,6 +130,7 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     start_times.clear()
     end_times.clear()
     module_inputs.clear()
+    module_in_kwargs.clear()
     module_outputs.clear()
     modules.clear()
     for (name, module) in model.named_modules():
@@ -160,6 +159,7 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
         if is_level_module(level_type, module):
             module_info = {'name': module_name, 'module': modules[module_name],
                            'inputs': module_inputs[module_name],
+                           'in_kwargs': module_in_kwargs[module_name],
                            # 'outputs': module_outputs[module_name],
                            # 'runtime': end_times[module_name] - start_times[
                            # module_name]
