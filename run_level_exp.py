@@ -3,6 +3,7 @@
 __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 
 import argparse
+import inspect
 import json
 import time
 from functools import partial
@@ -103,10 +104,10 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
     fn = level['module']
     fname = level['name']
     fi = level['inputs']
-
+    fi_kwargs = level['in_kwargs']
     # separate tensor args and rest from fi
-    # fixme: for now, tensor args are ordered first,
-    #  if not, need another solution,  (not true for roberta)
+    fn_fwd = fn.forward
+    # todo: unify fi and fi_kwargs
     if isinstance(fi, dict):
         ti = [t for t in fi.values() if isinstance(t, torch.Tensor)]
         ri = {rk: r for rk, r in fi.items() if not isinstance(r, torch.Tensor)}
@@ -115,12 +116,20 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
     elif isinstance(fi, tuple):
         ti = [t for t in fi if isinstance(t, torch.Tensor)]
         ri = [r for r in fi if not isinstance(r, torch.Tensor)]
-        fn.forward = wrapped_partial(fn.forward, *ri)
+        fn_args = inspect.getfullargspec(fn.forward)
+        ri_n = fn_args.args[len(ti) + 1:]
+        if len(ri) < len(ri_n):
+            # pad None to ri
+            ri += [None] * (len(ri_n) - len(ri))
+        assert len(ri) == len(ri_n), f'{ri} and {ri_n} should be same long!'
+        fill_args = {k: v for k, v in zip(ri_n, ri)}
+        fn.forward = wrapped_partial(fn.forward, **fill_args)
     else:
         # unknown type
         ti = fi
         logger.warning(f'unknown fi: {type(fi)}')
     flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname)
+    fn.forward = fn_fwd
     sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
@@ -136,8 +145,6 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
                 f'flops={flops}, mem_bytes={mem_bytes}, '
                 f'repeats={calibrated_repeats}, {fname}')
     for run in range(1, runs + 1):
-        logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_name}, '
-                    f'({run}/{runs}) {fname} levels')
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
         for _ in range(calibrated_repeats):
             if isinstance(fi, tuple):
@@ -149,6 +156,8 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
         level_end = time.clock_gettime(time.CLOCK_REALTIME)
         level_prof[f'start_{run}'] = level_start
         level_prof[f'end_{run}'] = level_end
+        logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_name}, '
+                    f'({run}/{runs}) {fname} done.')
         time.sleep(1)  # sleep 1s to cool down
     return level_prof
 
