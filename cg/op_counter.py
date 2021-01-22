@@ -122,9 +122,11 @@ def _dtype_to_bytes(dtype):
 
 
 def count_flops_mem_bytes(node):
+    if node.op not in op_counters:
+        return 0, 0
     op_func = globals().get(op_counters[node.op], None)
     if op_func is None:
-        warnings.warn(f'no counter available for {node.op}!')
+        # warnings.warn(f'no counter available for {node.op}!')
         return 0, 0
     else:
         return op_func(node)
