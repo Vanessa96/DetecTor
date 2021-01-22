@@ -104,30 +104,26 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
     fn = level['module']
     fname = level['name']
     fi = level['inputs']
+    assert isinstance(fi, tuple), f'{fi} must be tuple!'
     fi_kwargs = level['in_kwargs']
+    assert isinstance(fi_kwargs, dict), f'{fi_kwargs} must be dict!'
     # separate tensor args and rest from fi
     fn_fwd = fn.forward
-    # todo: unify fi and fi_kwargs
-    if isinstance(fi, dict):
-        ti = [t for t in fi.values() if isinstance(t, torch.Tensor)]
-        ri = {rk: r for rk, r in fi.items() if not isinstance(r, torch.Tensor)}
-        # https://github.com/pytorch/pytorch/issues/14455#issuecomment-445962680
-        fn.forward = wrapped_partial(fn.forward, **ri)
-    elif isinstance(fi, tuple):
-        ti = [t for t in fi if isinstance(t, torch.Tensor)]
-        ri = [r for r in fi if not isinstance(r, torch.Tensor)]
-        fn_args = inspect.getfullargspec(fn.forward)
-        ri_n = fn_args.args[len(ti) + 1:]
-        if len(ri) < len(ri_n):
-            # pad None to ri
-            ri += [None] * (len(ri_n) - len(ri))
-        assert len(ri) == len(ri_n), f'{ri} and {ri_n} should be same long!'
-        fill_args = {k: v for k, v in zip(ri_n, ri)}
-        fn.forward = wrapped_partial(fn.forward, **fill_args)
-    else:
-        # unknown type
-        ti = fi
-        logger.warning(f'unknown fi: {type(fi)}')
+    #  unify fi and fi_kwargs
+    arg_values = fi + tuple(fi_kwargs.values())
+    ti = [t for t in arg_values if isinstance(t, torch.Tensor)]
+    ri = [r for r in arg_values if not isinstance(r, torch.Tensor)]
+    fn_args = inspect.getfullargspec(fn_fwd).args
+    ti_len = len(ti)
+
+    assert ti_len + len(ri) + 1 == len(fn_args), \
+        f'{ti_len}+{len(ri)}+1 and {len(fn_args)}: {fn_args} should match!'
+    ri_n = fn_args[ti_len + 1:]  # +1 accounts for arg 'self'
+    fill_args = {k: v for k, v in zip(ri_n, ri)}
+
+    # wrap forward into traceable fn (only tensor args)
+    # https://github.com/pytorch/pytorch/issues/14455#issuecomment-445962680
+    fn.forward = wrapped_partial(fn.forward, **fill_args)
     flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname)
     fn.forward = fn_fwd
     sig = f"{level_name},{flops},{mem_bytes}"
