@@ -110,17 +110,20 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
     # separate tensor args and rest from fi
     fn_fwd = fn.forward
     #  unify fi and fi_kwargs
-    arg_values = fi + tuple(fi_kwargs.values())
-    ti = [t for t in arg_values if isinstance(t, torch.Tensor)]
-    ri = [r for r in arg_values if not isinstance(r, torch.Tensor)]
     fn_args = inspect.getfullargspec(fn_fwd).args
-    ti_len = len(ti)
-
-    assert ti_len + len(ri) + 1 == len(fn_args), \
-        f'{ti_len}+{len(ri)}+1 and {len(fn_args)}: {fn_args} should match!'
-    ri_n = fn_args[ti_len + 1:]  # +1 accounts for arg 'self'
-    fill_args = {k: v for k, v in zip(ri_n, ri)}
-
+    fill_args = dict()
+    fi_args = fn_args[1:1 + len(fi)]
+    ti = []
+    for fi_k, fi_v in zip(fi_args, fi):
+        if isinstance(fi_v, torch.Tensor):
+            ti.append(fi_v)
+        else:
+            fill_args[fi_k] = fi_v
+    for k, v in fi_kwargs.items():
+        if isinstance(v, torch.Tensor):
+            ti.append(v)
+        else:
+            fill_args[k] = v
     # wrap forward into traceable fn (only tensor args)
     # https://github.com/pytorch/pytorch/issues/14455#issuecomment-445962680
     fn.forward = wrapped_partial(fn.forward, **fill_args)
