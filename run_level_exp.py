@@ -136,13 +136,12 @@ def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs,
     sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
-    calibrated_repeats = calibrate_repeats(fn, fi, fi_kwargs, probe_repeats)
-
     if sig in level_sigs:
         logger.info(f'already profiled {sig} level, skip')
         return None
     else:
         level_sigs.add(sig)
+    calibrated_repeats = calibrate_repeats(fn, fi, fi_kwargs, probe_repeats)
     level_prof['repeats'] = calibrated_repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_name}, '
                 f'flops={flops}, mem_bytes={mem_bytes}, '
