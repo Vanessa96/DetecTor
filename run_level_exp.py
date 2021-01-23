@@ -69,7 +69,7 @@ def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
     inputs = (input_ids,)
     if config.model_type == 't5':
         #  attention_mask=None, decoder_input_ids=None
-        inputs += (input_ids, input_ids)
+        inputs = (input_ids, input_ids)
     flops, mem_bytes = get_model_flops_mem_bytes(model, inputs, model_name)
     model_prof = dict(name=model_name, flops=flops, mem_bytes=mem_bytes)
     repeats = calibrate_repeats(model, inputs, {}, probe_repeats)
