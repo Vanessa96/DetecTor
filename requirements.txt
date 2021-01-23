@@ -9,5 +9,4 @@ pyserial==3.4
 torch==1.7.0
 torchvision==0.8.1
 transformers==3.5.1
-toytree==2.0.0
-toyplot==0.19.0
+graphviz==0.16
