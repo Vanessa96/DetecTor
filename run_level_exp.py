@@ -72,7 +72,7 @@ def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
         inputs += (input_ids, input_ids)
     flops, mem_bytes = get_model_flops_mem_bytes(model, inputs, model_name)
     model_prof = dict(name=model_name, flops=flops, mem_bytes=mem_bytes)
-    repeats = calibrate_repeats(model, input_ids, {}, probe_repeats)
+    repeats = calibrate_repeats(model, inputs, {}, probe_repeats)
     model_prof['repeats'] = repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}, '
                 f'flops={flops}, mem_bytes={mem_bytes}, '
