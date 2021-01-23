@@ -43,23 +43,22 @@ def get_model_flops_mem_bytes(module_fn, inputs, module_name):
     return flops, mem_bytes
 
 
-def calibrate_repeats(flops, level_name, repeats):
-    if flops > 0:
-        # should in the range [100, 1e6]
-        # todo: better heuristics! module level should use smaller repeats
-        adjusted_repeats = max(repeats // (flops / 1e9), 100)
-        calibrated_repeats = int(min(adjusted_repeats, 1e6))
-    # elif mem_bytes > 0:
-    #     mem_mb = mem_bytes / 1024 / 1024
-    #     calibrated_repeats = int(num_repeats // (mem_mb / 100))
-    else:
-        calibrated_repeats = repeats
-    if level_name == 'embedding':
-        calibrated_repeats *= 10
-    return calibrated_repeats
+def calibrate_repeats(fn, fi, fi_kwargs, probe_repeats):
+    # probe_repeats set to 10 for ml, 5 for module, 3 for model
+    start = time.perf_counter()
+    needed = 0
+    while True:
+        for _ in range(probe_repeats):
+            _ = fn(*fi, **fi_kwargs)
+        end = time.perf_counter()
+        needed += 1
+        if end - start > 5:  # run 5 seconds
+            break
+    repeats = needed * probe_repeats
+    return repeats
 
 
-def run_model(model_name, bs, seq_len, num_repeats, runs, device):
+def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
     config = AutoConfig.from_pretrained(model_name)
     config.torchscript = True
     model = AutoModel.from_config(config)
@@ -70,19 +69,20 @@ def run_model(model_name, bs, seq_len, num_repeats, runs, device):
     inputs = (input_ids,)
     if config.model_type == 't5':
         #  attention_mask=None, decoder_input_ids=None
-        inputs += (input_ids, input_ids)
+        inputs = (input_ids, input_ids)
     flops, mem_bytes = get_model_flops_mem_bytes(model, inputs, model_name)
     model_prof = dict(name=model_name, flops=flops, mem_bytes=mem_bytes)
-    model_prof['repeats'] = num_repeats
+    repeats = calibrate_repeats(model, inputs, {}, probe_repeats)
+    model_prof['repeats'] = repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}, '
                 f'flops={flops}, mem_bytes={mem_bytes}, '
-                f'repeats={num_repeats}')
+                f'repeats={repeats}')
     seq2seq = hasattr(model, 'decoder')
     kwargs = {'decoder_input_ids': input_ids} if seq2seq else {}
     for run in range(1, runs + 1):
         logger.info(f'run {model_name}_b{bs}_i{seq_len} ({run}/{runs})')
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
-        for _ in range(num_repeats):
+        for _ in range(repeats):
             _ = model(input_ids, **kwargs)
         level_end = time.clock_gettime(time.CLOCK_REALTIME)
         model_prof[f'start_{run}'] = level_start
@@ -100,7 +100,7 @@ def wrapped_partial(func, *args, **kwargs):
     return partial_func
 
 
-def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
+def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs,
                      level, level_name):
     # # uncomment support specific ML levels
     # if level_name != 'linear':
@@ -136,13 +136,12 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
     sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
-    calibrated_repeats = calibrate_repeats(flops, level_name, num_repeats)
-
     if sig in level_sigs:
         logger.info(f'already profiled {sig} level, skip')
         return None
     else:
         level_sigs.add(sig)
+    calibrated_repeats = calibrate_repeats(fn, fi, fi_kwargs, probe_repeats)
     level_prof['repeats'] = calibrated_repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_name}, '
                 f'flops={flops}, mem_bytes={mem_bytes}, '
@@ -164,7 +163,7 @@ def main(args):
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     runs = args.runs
-    num_repeats = args.num_repeats
+    probe_repeats = args.probe_repeats
 
     torch.set_grad_enabled(False)
     use_cuda = not args.no_cuda
@@ -187,13 +186,13 @@ def main(args):
                                   level_type)
     if level_type == 'model':
         prof_info = run_model(model_name, bs, seq_len,
-                              num_repeats, runs, device)
+                              probe_repeats, runs, device)
         model_prof_info.append(prof_info)
     else:
         for level_name, levels in information.items():
             for level in levels:
                 prof_info = run_ml_or_module(model_name, bs, seq_len,
-                                             num_repeats, runs,
+                                             probe_repeats, runs,
                                              level, level_name)
                 if prof_info is None:
                     continue
@@ -217,8 +216,8 @@ if __name__ == "__main__":
                         help="input sequence length")
     parser.add_argument("-r", "--runs", type=int, default=10,
                         help="iterations to run the model")
-    parser.add_argument("-n", "--num_repeats", type=int, default=10000,
-                        help="iterations to run the model")
+    parser.add_argument("-n", "--probe_repeats", type=int, default=10,
+                        help="initial probing iterations to run the model")
     parser.add_argument("-m", "--model_name", type=str,
                         help="model string supported by the "
                              "HuggingFace Transformers library")
