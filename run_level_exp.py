@@ -46,11 +46,15 @@ def get_model_flops_mem_bytes(module_fn, inputs, module_name):
 def calibrate_repeats(fn, fi, fi_kwargs, probe_repeats):
     # probe_repeats set to 10 for ml, 5 for module, 3 for model
     start = time.perf_counter()
-    for _ in range(probe_repeats):
-        _ = fn(*fi, **fi_kwargs)
-    end = time.perf_counter()
-    delay = end - start
-    repeats = int(5 / delay) * probe_repeats  # run 5 seconds
+    needed = 0
+    while True:
+        for _ in range(probe_repeats):
+            _ = fn(*fi, **fi_kwargs)
+        end = time.perf_counter()
+        needed += 1
+        if end - start > 5:  # run 5 seconds
+            break
+    repeats = needed * probe_repeats
     return repeats
 
 
