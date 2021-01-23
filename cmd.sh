@@ -15,7 +15,7 @@ rprof/rprof 170 data/small-exp/ml-exp-jpc-res.csv 100000
 for b in `seq 32 -4 4`; do
   for i in `seq 512 -16 32`; do
     echo ${i},${b}=$(($i * $b))
-    python run_level_exp.py -t ml -o data/ml-exp-jpc -r 10 -b ${b} -i ${i} -m "distilbert-base-uncased" "roberta-base" "google/mobilebert-uncased" "bert-base-uncased"  -n 10000 2>&1 | tee data/ml-logs/ml-jpc-b${b}-i${i}.log
+    python run_level_exp.py -t ml -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m "distilbert-base-uncased" "roberta-base" "google/mobilebert-uncased" "bert-base-uncased"  -n 10000 2>&1 | tee data/ml-logs/ml-jpc-b${b}-i${i}.log
   done
 done
 
@@ -33,7 +33,23 @@ for b in `seq 8 8 32`; do
   done
 done
 
-b=32
-i=128
-python run_level_exp.py -t module -o data/module-exp -r 2 -b ${b} -i ${i} -m "google/mobilebert-uncased" "bert-base-uncased" "distilbert-base-uncased" "roberta-base"  -n 100 2>&1 | tee data/module-logs/module-b${b}-i${i}.log
+b=2
+i=6
+python run_level_exp.py -t ml-np -o data/ml-np-exp -r 2 -b ${b} -i ${i} -m "google/mobilebert-uncased" "bert-base-uncased" "distilbert-base-uncased" "roberta-base"  -n 100 2>&1 | tee data/ml-np-b${b}-i${i}.log
+
+
+for b in `seq 32 -4 4`; do
+  for i in `seq 512 -16 32`; do
+    echo ${i},${b}=$(($i * $b))
+    python run_level_exp.py -t ml -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m "distilbert-base-uncased" "roberta-base" "google/mobilebert-uncased" "bert-base-uncased"  -n 10000 2>&1 | tee data/ml-logs/ml-jpc-b${b}-i${i}.log
+  done
+done
+
+for b in `seq 32 -4 4`; do
+  for i in `seq 256 -8 8`; do
+    echo ${i},${b}=$(($i * $b))
+    python run_level_exp.py -t ml-np -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m "google/mobilebert-uncased" "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-logs/ml-np-jpc-b${b}-i${i}.log
+    python run_level_exp.py -t ml -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m "distilbert-base-uncased" "roberta-base" "google/mobilebert-uncased" "bert-base-uncased"  -n 10000 2>&1 | tee data/ml-logs/ml-jpc-b${b}-i${i}.log
+  done
+done
 
