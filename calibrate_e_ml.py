@@ -146,7 +146,7 @@ class EinSum(object):
         super().__init__()
         self.transformation = transformation
     
-    def forward(self, transformation, x):
+    def forward(self, *x):
         return torch.einsum(self.transformation, *x)
 
 def get_non_parametric_ml_ops(model, input_ids):
