@@ -72,11 +72,23 @@ def graphviz_representation(tree):
     This function creates a graphviz style digraph representation for the model graph
     """
 
+    module_to_color_map = {}
+    for name in ['matmul', 'bmm', 'softmax', 'einsum']:
+        module_to_color_map[name] = 'red'
+    for name in ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', \
+                       'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', \
+                       'Conv1D']:
+        module_to_color_map[name] = 'orange'
+
     dot = Digraph(comment='Model Graph')
     node_count = 0
     graphviz_node_id_mapping = {}
     # first create nodes with their labels
     for key, node in tree.items():
+        try:
+            dot.attr('node', color=module_to_color_map[node.scope.split('.')[-1]])
+        except:
+            dot.attr('node')
         dot.node(str(node_count), node.scope.split('.')[-1])
         graphviz_node_id_mapping[node.scope] = str(node_count)
         node_count += 1
@@ -167,7 +179,13 @@ def run_model_to_graph(model_name, device, out_file):
                     scope_to_match = 'root'
                 else:
                     scope_to_match = 'root.' + jit_node.scope
+                if jit_node.op not in ['aten::matmul', 'aten::bmm', 'aten::einsum', 'aten::softmax']:
+                    continue
                 node_in_position = tree[scope_to_match]
+                if node_in_position.instance_type in ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', \
+                       'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', \
+                       'Conv1D']:
+                    continue
                 new_scope_name = scope_to_match + '.' + jit_node.op.split('::')[-1]
                 new_node = TreeNode(new_scope_name, jit_node.op.split('::')[-1], node_in_position.level+1, node_in_position.scope, jit_node.op)
                 node_in_position.child_nodes.append(new_node)
