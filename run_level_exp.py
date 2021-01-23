@@ -32,10 +32,14 @@ def get_flops_mem_bytes(graph):
 
 
 def get_model_flops_mem_bytes(module_fn, inputs, module_name):
-    trace = torch.jit.trace(module_fn, inputs)
+    device = inputs[0].device
+    cpu_inputs = tuple([i.cpu() for i in inputs])
+    trace = torch.jit.trace(module_fn.cpu(), cpu_inputs)
     trace_graph = trace.inlined_graph
     graph, _ = construct_aggregation_graph(trace_graph, module_name)
     flops, mem_bytes = get_flops_mem_bytes(graph)
+    module_fn.to(device)
+    tuple([i.to(device) for i in inputs])
     return flops, mem_bytes
 
 
