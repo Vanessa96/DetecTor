@@ -1,12 +1,11 @@
 # experiment-impact-tracker==0.1.8
-# graphviz==0.15
-natsort==7.0.1
-pandas==1.2.0
-parse==1.18.0
-pdir2==0.3.1.post2
+natsort==7.1.0
+pandas==1.2.1
+parse==1.19.0
+patchy==2.2.0
+pdir2==0.3.2
 py3nvml==0.2.6
-pyserial==3.4
-torch==1.7.0
-torchvision==0.8.1
-transformers==3.5.1
+pyserial==3.5
+torch==1.7.1
+transformers==4.2.2
 graphviz==0.16

@@ -115,4 +115,8 @@ emonpi the overhead of compute crossing in calcVI is high, > 100 ms, 20 crossing
 void EnergyMonitor::calcVI(unsigned int crossings, unsigned int timeout)
 ```
 
+module level hooks, need to first support kwargs,
+for trace to work, need to wrap module.forward fn with non-tensor args filled as constant
+solution: use `patchy` to patch `torch.nn.Module._call_impl`
 
+ref: https://www.pair.com/support/kb/paircloud-diff-and-patch/

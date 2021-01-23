@@ -3,18 +3,20 @@
 __author__ = "Qingqing Cao, https://awk.ai/, Twitter@sysnlp"
 
 import argparse
+import inspect
 import json
 import time
+from functools import partial
+from functools import update_wrapper
 from pathlib import Path
-
+from common import logger
+from common import sanitize
 import torch
 from transformers import AutoConfig
 from transformers import AutoModel
 
 from calibrate_e_ml import get_module_info
 from cg.node import construct_aggregation_graph
-from common import logger
-from common import sanitize
 
 
 def get_flops_mem_bytes(graph):
@@ -30,17 +32,21 @@ def get_flops_mem_bytes(graph):
 
 
 def get_model_flops_mem_bytes(module_fn, inputs, module_name):
-    trace = torch.jit.trace(module_fn, inputs)
+    device = inputs[0].device
+    cpu_inputs = tuple([i.cpu() for i in inputs])
+    trace = torch.jit.trace(module_fn.cpu(), cpu_inputs)
     trace_graph = trace.inlined_graph
     graph, _ = construct_aggregation_graph(trace_graph, module_name)
     flops, mem_bytes = get_flops_mem_bytes(graph)
+    module_fn.to(device)
+    tuple([i.to(device) for i in inputs])
     return flops, mem_bytes
 
 
 def calibrate_repeats(flops, level_name, repeats):
     if flops > 0:
         # should in the range [100, 1e6]
-        # todo: better heuristics!
+        # todo: better heuristics! module level should use smaller repeats
         adjusted_repeats = max(repeats // (flops / 1e9), 100)
         calibrated_repeats = int(min(adjusted_repeats, 1e6))
     # elif mem_bytes > 0:
@@ -88,21 +94,45 @@ def run_model(model_name, bs, seq_len, num_repeats, runs, device):
 level_sigs = set()
 
 
-def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs, device,
+def wrapped_partial(func, *args, **kwargs):
+    partial_func = partial(func, *args, **kwargs)
+    update_wrapper(partial_func, func)
+    return partial_func
+
+
+def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs,
                      level, level_name):
     # # uncomment support specific ML levels
     # if level_name != 'linear':
     #     return None
     fn = level['module']
     fname = level['name']
-    fi = level['inputs'][0]
-    # fo_size, fo_dtype = level['outputs']
-    # if fi_dtype in (torch.int32, torch.int64, torch.long):
-    #     fi = torch.zeros(fi_size, dtype=fi_dtype, device=device)
-    # else:
-    #     fi = torch.rand(fi_size, dtype=fi_dtype, device=device)
-    # fo = torch.rand(fo_size, dtype=fo_dtype)
-    flops, mem_bytes = get_model_flops_mem_bytes(fn, fi, fname)
+    fi = level['inputs']
+    assert isinstance(fi, tuple), f'{fi} must be tuple!'
+    fi_kwargs = level['in_kwargs']
+    assert isinstance(fi_kwargs, dict), f'{fi_kwargs} must be dict!'
+    # separate tensor args and rest from fi
+    fn_fwd = fn.forward
+    #  unify fi and fi_kwargs
+    fn_args = inspect.getfullargspec(fn_fwd).args
+    fill_args = dict()
+    fi_args = fn_args[1:1 + len(fi)]
+    ti = []
+    for fi_k, fi_v in zip(fi_args, fi):
+        if isinstance(fi_v, torch.Tensor):
+            ti.append(fi_v)
+        else:
+            fill_args[fi_k] = fi_v
+    for k, v in fi_kwargs.items():
+        if isinstance(v, torch.Tensor):
+            ti.append(v)
+        else:
+            fill_args[k] = v
+    # wrap forward into traceable fn (only tensor args)
+    # https://github.com/pytorch/pytorch/issues/14455#issuecomment-445962680
+    fn.forward = wrapped_partial(fn.forward, **fill_args)
+    flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname)
+    fn.forward = fn_fwd
     sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
@@ -118,14 +148,14 @@ def run_ml_or_module(model_name, bs, seq_len, num_repeats, runs, device,
                 f'flops={flops}, mem_bytes={mem_bytes}, '
                 f'repeats={calibrated_repeats}, {fname}')
     for run in range(1, runs + 1):
-        logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_name}, '
-                    f'({run}/{runs}) {fname} levels')
         level_start = time.clock_gettime(time.CLOCK_REALTIME)
         for _ in range(calibrated_repeats):
-            _ = fn(fi)
+            _ = fn(*fi, **fi_kwargs)
         level_end = time.clock_gettime(time.CLOCK_REALTIME)
         level_prof[f'start_{run}'] = level_start
         level_prof[f'end_{run}'] = level_end
+        logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_name}, '
+                    f'({run}/{runs}) {fname} done.')
         time.sleep(1)  # sleep 1s to cool down
     return level_prof
 
@@ -143,31 +173,35 @@ def main(args):
     seq_len = args.input_length
     bs = args.batch_size
     level_type = args.level_type
-    for model_name in args.models:
-        logger.info(f'profiling {model_name} {level_type} on {device}...')
-        information = get_module_info(model_name, bs, seq_len, device,
-                                      level_type)
-        model_prof_info = []
-        model_name_s = sanitize(model_name)
-        filename = f'{model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len}.json'
-        prof_info_file = out_dir.joinpath(filename)
-        if level_type == 'model':
-            prof_info = run_model(model_name, bs, seq_len,
-                                  num_repeats, runs, device)
-            model_prof_info.append(prof_info)
-        else:
-            for level_name, levels in information.items():
-                for level in levels:
-                    prof_info = run_ml_or_module(model_name, bs, seq_len,
-                                                 num_repeats, runs, device,
-                                                 level, level_name)
-                    if prof_info is None:
-                        continue
-                    prof_info['type'] = level_name
-                    model_prof_info.append(prof_info)
-        prof_info_file.write_text(json.dumps(model_prof_info))
-        logger.info(f'{model_name} done.')
-    logger.info('all done.')
+    model_name = args.model_name
+    # for model_name in args.models:
+    logger.info(f'profiling {model_name} {level_type} on {device}...')
+    model_prof_info = []
+    model_name_s = sanitize(model_name)
+    filename = f'{model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len}.json'
+    prof_info_file = out_dir.joinpath(filename)
+    if prof_info_file.exists():
+        logger.info(f'{filename} already profiled, skip')
+        return
+    information = get_module_info(model_name, bs, seq_len, device,
+                                  level_type)
+    if level_type == 'model':
+        prof_info = run_model(model_name, bs, seq_len,
+                              num_repeats, runs, device)
+        model_prof_info.append(prof_info)
+    else:
+        for level_name, levels in information.items():
+            for level in levels:
+                prof_info = run_ml_or_module(model_name, bs, seq_len,
+                                             num_repeats, runs,
+                                             level, level_name)
+                if prof_info is None:
+                    continue
+                prof_info['type'] = level_name
+                model_prof_info.append(prof_info)
+    prof_info_file.write_text(json.dumps(model_prof_info))
+    logger.info(f'{model_name} done.')
+    # logger.info('all done.')
 
 
 if __name__ == "__main__":
@@ -175,7 +209,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out_dir", type=str, required=True,
                         help="output dir")
     parser.add_argument("-t", "--level_type", type=str, required=True,
-                        choices=('ml', 'module', 'model'),
+                        choices=('ml', 'ml-np', 'module', 'model'),
                         help="ml, module, model type")
     parser.add_argument("-b", "--batch_size", type=int, default=16,
                         help="batch size")
@@ -185,8 +219,8 @@ if __name__ == "__main__":
                         help="iterations to run the model")
     parser.add_argument("-n", "--num_repeats", type=int, default=10000,
                         help="iterations to run the model")
-    parser.add_argument("-m", "--models", type=str, nargs='+',
-                        help="list of model strings supported by the "
+    parser.add_argument("-m", "--model_name", type=str,
+                        help="model string supported by the "
                              "HuggingFace Transformers library")
     parser.add_argument("-nc", "--no_cuda", action="store_true",
                         help="Whether not to use CUDA when available")

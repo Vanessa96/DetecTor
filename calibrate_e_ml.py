@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 __author__ = "Yash Kumar Lal"
 
+from cg.node import construct_aggregation_graph
+
 """
 The 'information' variable in the script contains all the requisite information
  for one run of the model
@@ -27,6 +29,7 @@ from transformers import modeling_utils
 start_times = dict()
 end_times = dict()
 module_inputs = dict()
+module_in_kwargs = dict()
 module_outputs = dict()
 modules = dict()
 
@@ -55,12 +58,13 @@ def parse_args():
 
 
 def log_end_builder(name):
-    def log_end(module, m_in, m_out):
+    def log_end(module, m_in, m_in_kwargs, m_out):
+        # fixme: patch/mock method register_forward_hook in nn.Module
         end_times[f'{name}:{module.__class__.__name__}'] = time.perf_counter()
-        if m_in:
-            module_inputs[f'{name}:{module.__class__.__name__}'] = m_in
-            module_outputs[f'{name}:{module.__class__.__name__}'] = m_out
-            modules[f'{name}:{module.__class__.__name__}'] = module
+        module_inputs[f'{name}:{module.__class__.__name__}'] = m_in
+        module_in_kwargs[f'{name}:{module.__class__.__name__}'] = m_in_kwargs
+        module_outputs[f'{name}:{module.__class__.__name__}'] = m_out
+        modules[f'{name}:{module.__class__.__name__}'] = module
 
     return log_end
 
@@ -118,13 +122,65 @@ def is_level_module(level_type, module):
         return is_ml_operation(module)
     else:
         # this return model level
-        # todo: need to return non-parametric ml level
         return not is_ml_operation(module)
+
+
+class MatMul(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, y):
+        return torch.matmul(x, y)
+
+
+def get_non_parametric_ml_ops(model, input_ids):
+    # todo: add other non-parametric ops if there are any
+    #   if not a nn.module, wrap it like MatMul Module above
+    non_param_scopes = {name for name, module in model.named_modules() if
+                        not is_ml_operation(module)}
+    trace = torch.jit.trace(model, input_ids)
+    trace_graph = trace.inlined_graph
+    graph, op_data_types = construct_aggregation_graph(trace_graph, 'model')
+    information = defaultdict(list)
+    for node in graph.nodes:
+        if node.op == 'aten::softmax':
+            args = node.inputs
+            inputs = torch.rand(args[0].shape, dtype=torch.float,
+                                device=model.device)
+            module_arg = args[1].extra['val']
+            module_info = {'name': node.scope, 'module': nn.Softmax(module_arg),
+                           'inputs': (inputs,),
+                           'in_kwargs': {},
+                           }
+            information['softmax'].append(module_info)
+        if node.op == 'aten::matmul' and node.scope in non_param_scopes:
+            args = node.inputs
+            inputs = [torch.rand(arg.shape, dtype=torch.float,
+                                 device=model.device) for arg in args]
+            module_info = {'name': node.scope, 'module': MatMul(),
+                           'inputs': tuple(inputs),
+                           'in_kwargs': {},
+                           }
+            information['matmul'].append(module_info)
+    return information
 
 
 def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
     model = load_model(model_name)
     model = model.eval().to(device)
+
+    inputs = torch.randint(1000, size=(batch_size, input_len)).long()
+    inputs = inputs.to(device)
+    if level_type == 'ml-np':
+        information = get_non_parametric_ml_ops(model, inputs)
+        return information
+
+    start_times.clear()
+    end_times.clear()
+    module_inputs.clear()
+    module_in_kwargs.clear()
+    module_outputs.clear()
+    modules.clear()
     for (name, module) in model.named_modules():
         if not name:
             continue
@@ -133,15 +189,12 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
             continue
         module.register_forward_hook(log_end_builder(name))
 
-    inputs = torch.randint(1000, size=(batch_size, input_len)).long()
-    inputs = inputs.to(device)
-
     if 't5' in model_name:
         labels = torch.randint(1000, size=(batch_size, input_len)).long()
         labels = labels.to(device)
-        _ = model(input_ids=inputs, decoder_input_ids=labels, return_dict=True)
+        _ = model(input_ids=inputs, decoder_input_ids=labels)
     else:
-        _ = model(input_ids=inputs, return_dict=True)
+        _ = model(input_ids=inputs)
 
     information = defaultdict(list)
     for module_name in end_times.keys():
@@ -151,6 +204,7 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
         if is_level_module(level_type, module):
             module_info = {'name': module_name, 'module': modules[module_name],
                            'inputs': module_inputs[module_name],
+                           'in_kwargs': module_in_kwargs[module_name],
                            # 'outputs': module_outputs[module_name],
                            # 'runtime': end_times[module_name] - start_times[
                            # module_name]
@@ -160,6 +214,24 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
             information[module_identifier].append(module_info)
 
     return information
+
+
+def print_info(information):
+    for k, info in information.items():
+        print(k, len(info))
+        infoi = info[0]
+        ii = infoi['inputs']
+        ii_kwargs = infoi['in_kwargs']
+        if ii_kwargs:
+            print(type(ii_kwargs), infoi['name'],
+                  {iik: v.shape if isinstance(v, torch.Tensor) else v
+                   for iik, v in ii_kwargs.items()})
+        if ii:
+            print(type(ii), infoi['name'],
+                  [v.shape if isinstance(v, torch.Tensor) else v
+                   for v in ii])
+
+        print()
 
 
 def main(args):

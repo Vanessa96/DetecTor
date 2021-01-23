@@ -98,12 +98,14 @@ def _process_data_nodes(node_inputs, data_nodes):
             dtype = ni.type().scalarType()  # Float
             shape = ni.type().sizes()  # list of int
             # check how to detect if this is a parameter data node
-        # elif isinstance(node_type, torch.Intt)
         elif isinstance(node_type, torch.StringType):
             dtype = str(node_type)
             shape = []
             extra['str'] = ni.toIValue()
-
+        elif isinstance(node_type, torch.IntType):
+            dtype = 'int'
+            shape = []
+            extra['val'] = ni.toIValue()
         elif isinstance(node_type, torch.ListType):
             dtype = node_type.getElementType()
             shape = []
