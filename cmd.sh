@@ -45,11 +45,17 @@ for b in `seq 32 -4 4`; do
   done
 done
 
+declare -a models=("google/mobilebert-uncased" "bert-base-uncased" "distilbert-base-uncased" "roberta-base")
+for model in "${models[@]}"; do
 for b in `seq 32 -4 4`; do
   for i in `seq 256 -8 8`; do
     echo ${i},${b}=$(($i * $b))
-    python run_level_exp.py -t ml-np -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m "google/mobilebert-uncased" "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -n 10000 2>&1 | tee data/ml-logs/ml-np-jpc-b${b}-i${i}.log
-    python run_level_exp.py -t ml -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m "distilbert-base-uncased" "roberta-base" "google/mobilebert-uncased" "bert-base-uncased"  -n 10000 2>&1 | tee data/ml-logs/ml-jpc-b${b}-i${i}.log
+    python run_level_exp.py -t ml-np -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m ${model} -n 10000 2>&1 | tee data/ml-logs/ml-np-jpc-b${b}-i${i}.log
+    python run_level_exp.py -t ml -o data/ml-exp-jpc -r 5 -b ${b} -i ${i} -m ${model}  -n 10000 2>&1 | tee data/ml-logs/ml-jpc-b${b}-i${i}.log
+    python run_level_exp.py -t module -o data/module-exp-jpc -r 5 -b ${b} -i ${i} -m ${model} -n 1000 2>&1 | tee data/module-logs/module-b${b}-i${i}.log
+    python run_level_exp.py -t model -o data/model-exp-jpc -r 5 -b ${b} -i ${i} -m ${model} -n 100 2>&1 | tee data/nrg-b${b}-i${i}.log
   done
 done
+done
+python run_level_exp.py -t model -o data/model-exp-jpc -r 5 -b ${b} -i ${i} -m ${models} -n 100
 

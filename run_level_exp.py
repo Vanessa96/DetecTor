@@ -169,31 +169,35 @@ def main(args):
     seq_len = args.input_length
     bs = args.batch_size
     level_type = args.level_type
-    for model_name in args.models:
-        logger.info(f'profiling {model_name} {level_type} on {device}...')
-        information = get_module_info(model_name, bs, seq_len, device,
-                                      level_type)
-        model_prof_info = []
-        model_name_s = sanitize(model_name)
-        filename = f'{model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len}.json'
-        prof_info_file = out_dir.joinpath(filename)
-        if level_type == 'model':
-            prof_info = run_model(model_name, bs, seq_len,
-                                  num_repeats, runs, device)
-            model_prof_info.append(prof_info)
-        else:
-            for level_name, levels in information.items():
-                for level in levels:
-                    prof_info = run_ml_or_module(model_name, bs, seq_len,
-                                                 num_repeats, runs,
-                                                 level, level_name)
-                    if prof_info is None:
-                        continue
-                    prof_info['type'] = level_name
-                    model_prof_info.append(prof_info)
-        prof_info_file.write_text(json.dumps(model_prof_info))
-        logger.info(f'{model_name} done.')
-    logger.info('all done.')
+    model_name = args.model_name
+    # for model_name in args.models:
+    logger.info(f'profiling {model_name} {level_type} on {device}...')
+    model_prof_info = []
+    model_name_s = sanitize(model_name)
+    filename = f'{model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len}.json'
+    prof_info_file = out_dir.joinpath(filename)
+    if prof_info_file.exists():
+        logger.info(f'{filename} already profiled, skip')
+        return
+    information = get_module_info(model_name, bs, seq_len, device,
+                                  level_type)
+    if level_type == 'model':
+        prof_info = run_model(model_name, bs, seq_len,
+                              num_repeats, runs, device)
+        model_prof_info.append(prof_info)
+    else:
+        for level_name, levels in information.items():
+            for level in levels:
+                prof_info = run_ml_or_module(model_name, bs, seq_len,
+                                             num_repeats, runs,
+                                             level, level_name)
+                if prof_info is None:
+                    continue
+                prof_info['type'] = level_name
+                model_prof_info.append(prof_info)
+    prof_info_file.write_text(json.dumps(model_prof_info))
+    logger.info(f'{model_name} done.')
+    # logger.info('all done.')
 
 
 if __name__ == "__main__":
@@ -211,8 +215,8 @@ if __name__ == "__main__":
                         help="iterations to run the model")
     parser.add_argument("-n", "--num_repeats", type=int, default=10000,
                         help="iterations to run the model")
-    parser.add_argument("-m", "--models", type=str, nargs='+',
-                        help="list of model strings supported by the "
+    parser.add_argument("-m", "--model_name", type=str,
+                        help="model string supported by the "
                              "HuggingFace Transformers library")
     parser.add_argument("-nc", "--no_cuda", action="store_true",
                         help="Whether not to use CUDA when available")
