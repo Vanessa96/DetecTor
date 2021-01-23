@@ -42,7 +42,7 @@ def get_model_flops_mem_bytes(module_fn, inputs, module_name):
 def calibrate_repeats(flops, level_name, repeats):
     if flops > 0:
         # should in the range [100, 1e6]
-        # todo: better heuristics!
+        # todo: better heuristics! module level should use smaller repeats
         adjusted_repeats = max(repeats // (flops / 1e9), 100)
         calibrated_repeats = int(min(adjusted_repeats, 1e6))
     # elif mem_bytes > 0:
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out_dir", type=str, required=True,
                         help="output dir")
     parser.add_argument("-t", "--level_type", type=str, required=True,
-                        choices=('ml', 'module', 'model'),
+                        choices=('ml', 'ml-np', 'module', 'model'),
                         help="ml, module, model type")
     parser.add_argument("-b", "--batch_size", type=int, default=16,
                         help="batch size")
