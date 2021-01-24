@@ -41,7 +41,6 @@ def parse_args():
                              '(e.g. bert-base-uncased, distilbert-base-uncased,'
                              'google/mobilebert-uncased, roberta-base,'
                              'bert-large-uncased, roberta-large,'
-                             'xlnet-base-cased, xlnet-large-cased,'
                              'albert-base-v2, albert-large-v2, t5-small, t5-base,'
                              'openai-gpt, gpt2, sshleifer/tiny-gpt2, distilgpt2'
                              'sshleifer/tiny-ctrl, facebook/bart-base, facebook/bart-large,'
@@ -53,6 +52,9 @@ def parse_args():
                         help='Length of input to run model with', default=100)
     parser.add_argument('--no-cuda', dest='no_cuda', action='store_true',
                         help='Remove use of CUDA')
+    parser.add_argument("-t", "--level_type", type=str, required=True,
+                        choices=('ml', 'ml-np', 'module', 'model'),
+                        help="ml, module, model type")
     args, _ = parser.parse_known_args()
     return args
 
@@ -132,6 +134,20 @@ class MatMul(nn.Module):
     def forward(self, x, y):
         return torch.matmul(x, y)
 
+class BMM(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, y):
+        return torch.bmm(x, y)
+
+class EinSum(object):
+    def __init__(self, transformation):
+        super().__init__()
+        self.transformation = transformation
+    
+    def forward(self, *x):
+        return torch.einsum(self.transformation, *x)
 
 def get_non_parametric_ml_ops(model, input_ids):
     # todo: add other non-parametric ops if there are any
@@ -164,6 +180,34 @@ def get_non_parametric_ml_ops(model, input_ids):
                            'in_kwargs': {},
                            }
             information['matmul'].append(module_info)
+        if node.op == 'aten::bmm' and node.scope in non_param_scopes:
+            args = node.inputs
+            inputs = [torch.rand(arg.shape, dtype=torch.float,
+                                 device=model.device) for arg in args if arg.dtype != None and len(arg.shape) > 0]
+            module_info = {'name': node.scope, 'module': BMM(),
+                           'inputs': tuple(inputs),
+                           'in_kwargs': {},
+                           }
+            information['bmm'].append(module_info)
+        if node.op == 'aten::einsum' and node.scope in non_param_scopes:
+            args = node.inputs
+            inputs = []
+            for arg in args:
+                if arg.dtype == 'str':
+                    transformation = arg.extra['str']
+                    continue
+                elif arg.dtype == None:
+                    continue
+                elif len(arg.shape) == 0:
+                    continue
+                input = torch.rand(arg.shape[0], dtype=torch.float,
+                                 device=model.device)
+                inputs.append(input)
+            module_info = {'name': node.scope, 'module': EinSum(transformation),
+                           'inputs': tuple(inputs),
+                           'in_kwargs': {},
+                           }
+            information['einsum'].append(module_info)
     return information
 
 
@@ -173,6 +217,9 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
 
     inputs = torch.randint(1000, size=(batch_size, input_len)).long()
     inputs = inputs.to(device)
+    if 't5' in model_name:
+        # t5 does not work for non parametric operations
+        inputs = (inputs, inputs)
     if level_type == 'ml-np':
         information = get_non_parametric_ml_ops(model, inputs)
         return information
@@ -241,8 +288,7 @@ def main(args):
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
     information = get_module_info(args.model_name, args.batch_size,
-                                  args.input_len, device)
-
+                                  args.input_len, device, args.level_type)
 
 if __name__ == '__main__':
     main(parse_args())
