@@ -35,7 +35,9 @@ def main(args):
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     runs = args.runs
+    input_start = args.input_start
     input_length = args.input_length
+    batch_start = args.batch_start
     batch_size = args.batch_size
     batch_step = args.batch_step
     seq_step = args.seq_step
@@ -44,9 +46,10 @@ def main(args):
 
     feature_file = out_dir / f'{exp_name}_features.csv'
 
-    res = pd.read_csv(out_dir / f'{exp_name}-res.csv')
-    energy = pd.read_csv(out_dir / f'{exp_name}-energy.csv',
-                         error_bad_lines=False, usecols=[0, 2])
+    res_file = args.res_file or out_dir / f'{exp_name}-res.csv'
+    energy_file = args.energy_file or out_dir / f'{exp_name}-energy.csv'
+    res = pd.read_csv(res_file)
+    energy = pd.read_csv(energy_file, error_bad_lines=False, usecols=[0, 2])
     energy = energy[energy['value'].apply(lambda x: is_float(x))]
     energy = energy[energy['timestamp'].apply(lambda x: is_float(x))]
 
@@ -55,8 +58,8 @@ def main(args):
 
     for model_name in args.models:
         feature_values = {k: [] for k in feature_names}
-        for bs in list(range(2, batch_size, batch_step)) + [1]:
-            for seq_len in range(16, input_length, seq_step):
+        for bs in range(batch_start, batch_size, batch_step):
+            for seq_len in range(input_start, input_length, seq_step):
                 name_s = sanitize(model_name)
                 filename = f'{name_s}_{exp_type}_r{runs}_b{bs}_i{seq_len}.json'
                 prof_file = Path(out_dir) / exp_name / filename
@@ -134,20 +137,26 @@ if __name__ == "__main__":
                         help="output dir")
     parser.add_argument("-e", "--exp_name", type=str, required=True,
                         help="experiment name")
-    parser.add_argument("-b", "--batch_size", type=int, default=34,
+    parser.add_argument("-ef", "--energy_file", type=str, default=None)
+    parser.add_argument("-rf", "--res_file", type=str, default=None)
+    parser.add_argument("-bt", "--batch_start", type=int, default=4,
+                        help="batch size start")
+    parser.add_argument("-b", "--batch_size", type=int, default=36,
                         help="batch size")
-    parser.add_argument("-bs", "--batch_step", type=int, default=2,
+    parser.add_argument("-bs", "--batch_step", type=int, default=4,
                         help="batch size step")
     parser.add_argument("-ss", "--seq_step", type=int, default=16,
                         help="input size step")
-    parser.add_argument("-i", "--input_length", type=int, default=400,
+    parser.add_argument("-is", "--input_start", type=int, default=8,
+                        help="input sequence length")
+    parser.add_argument("-i", "--input_length", type=int, default=265,
                         help="input sequence length")
     parser.add_argument("-r", "--runs", type=int, default=5,
                         help="iterations to run the model")
-    parser.add_argument("-m", "--model", type=str,
+    parser.add_argument("-m", "--models", type=str, nargs="+",
                         help="model name supported by the "
                              "HuggingFace Transformers library")
     parser.add_argument("-t", "--exp_type", type=str, required=True,
-                        choices=('ml', 'module', 'model'),
+                        choices=('ml', 'ml-np', 'module', 'model'),
                         help="ml, module, model type")
     main(parser.parse_args())
