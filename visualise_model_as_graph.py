@@ -72,24 +72,21 @@ def graphviz_representation(tree):
     This function creates a graphviz style digraph representation for the model graph
     """
 
-    module_to_color_map = {}
-    for name in ['matmul', 'bmm', 'softmax', 'einsum']:
-        module_to_color_map[name] = 'red'
-    for name in ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', \
-                       'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', \
-                       'Conv1D']:
-        module_to_color_map[name] = 'orange'
+    math_ops_name = ['matmul', 'bmm', 'softmax', 'einsum']
+    ml_ops_name = ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', 'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', 'Conv1D']
 
     dot = Digraph(comment='Model Graph')
     node_count = 0
     graphviz_node_id_mapping = {}
     # first create nodes with their labels
     for key, node in tree.items():
-        try:
-            dot.attr('node', color=module_to_color_map[node.scope.split('.')[-1]])
-        except:
-            dot.attr('node')
-        dot.node(str(node_count), node.scope.split('.')[-1])
+        if node.instance_type in ml_ops_name:
+            dot.attr('node', color='red', shape='oval')
+        elif node.instance_type in math_ops_name:
+            dot.attr('node', color='blue', shape='diamond')
+        else:
+            dot.attr('node', color='black', shape='rectangle')
+        dot.node(str(node_count), node.scope.split('.')[-1] + ':' + node.instance_type)
         graphviz_node_id_mapping[node.scope] = str(node_count)
         node_count += 1
     # add edges between nodes using node ids assigned in previous loop
@@ -135,6 +132,8 @@ def create_tree_from_modules(model):
     for operations in model_operation_information[1:]:
         scope = operations[0]
         instance_type = operations[1]
+        if instance_type == 'Dropout':
+            continue
         module = operations[2]
         level = len(scope.split('.')) - 1
         parent_name = '.'.join(scope.split('.')[:-1])
