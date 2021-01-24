@@ -55,7 +55,7 @@ def calibrate_repeats(fn, fi, fi_kwargs, probe_repeats):
         if end - start > 5:  # run 5 seconds
             break
     repeats = max(probe_repeats, needed * probe_repeats)
-    return repeats
+    return repeats * 4
 
 
 def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
