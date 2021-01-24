@@ -44,7 +44,7 @@ def main(args):
     exp_type = args.exp_type
     exp_name = args.exp_name
 
-    feature_file = out_dir / f'{exp_name}_features.csv'
+    feature_file = out_dir / f'{exp_type}-{exp_name}_features.csv'
 
     res_file = args.res_file or out_dir / f'{exp_name}-res.csv'
     energy_file = args.energy_file or out_dir / f'{exp_name}-energy.csv'
@@ -56,7 +56,7 @@ def main(args):
 
     energy['value'] = energy['value'].astype(float).div(100)
     energy['timestamp'] = energy['timestamp'].astype(float)
-
+    infos = []
     for model_name in args.models:
         feature_values = {k: [] for k in feature_names}
         for bs in range(batch_start, batch_size, batch_step):
@@ -71,8 +71,10 @@ def main(args):
                 process_record(energy, prof_info, res, feature_values,
                                model_name, bs, runs, seq_len)
         info = pd.DataFrame(data=feature_values)
-        info.to_csv(feature_file)
+        infos.append(info)
         print(f'{model_name} done.')
+    pd.concat(infos).to_csv(feature_file, index=False)
+    print('all done.')
 
 
 def process_record(energy, prof_info, res, feature_values,

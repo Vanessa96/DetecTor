@@ -77,3 +77,12 @@ for b in `seq 32 -4 4`; do
     echo echo ${i},${b}=$(($i * $b))
   done
 done | wc -l
+
+python gen_feature.py -o data/qpc -t module -e module-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+
+python gen_feature.py -o data/qpc -t ml -e ml-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+
+python gen_feature.py -o data/qpc -t ml-np -e ml-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+
+python gen_feature.py -o data/qpc -t model -e model-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+
