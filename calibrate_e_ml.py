@@ -148,7 +148,8 @@ def get_non_parametric_ml_ops(model, input_ids):
             inputs = torch.rand(args[0].shape, dtype=torch.float,
                                 device=model.device)
             module_arg = args[1].extra['val']
-            module_info = {'name': node.scope, 'module': nn.Softmax(module_arg),
+            module_info = {'name': f'{node.scope}:Softmax',
+                           'module': nn.Softmax(module_arg),
                            'inputs': (inputs,),
                            'in_kwargs': {},
                            }
@@ -157,7 +158,8 @@ def get_non_parametric_ml_ops(model, input_ids):
             args = node.inputs
             inputs = [torch.rand(arg.shape, dtype=torch.float,
                                  device=model.device) for arg in args]
-            module_info = {'name': node.scope, 'module': MatMul(),
+            module_info = {'name': f'{node.scope}:MatMul',
+                           'module': MatMul(),
                            'inputs': tuple(inputs),
                            'in_kwargs': {},
                            }

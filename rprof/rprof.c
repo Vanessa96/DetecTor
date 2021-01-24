@@ -172,7 +172,7 @@ int main(int argc, char ** argv) {
     double mem_usage = calculate_mem_usage(&mem_util);
     
     sample_time = gettime();
-    fprintf(output_file, "%.6f, %.1f, %.1f, %i", sample_time/1e6, cpu_util, mem_usage, device_count);
+    fprintf(output_file, "%.6f,%.1f,%.1f,%i", sample_time/1e6, cpu_util, mem_usage, device_count);
     if (print_count%10==0)
     {
       printf("\33[2K\r");
@@ -201,7 +201,7 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
         return nv_status;
       }
-      fprintf(output_file, ", %i, %i, %i", gpu_util, gpu_mem_util, gpu_power);
+      fprintf(output_file, ",%i,%i,%i", gpu_util, gpu_mem_util, gpu_power);
       if (print_count%10==0)
       {
         printf(", gpu=%i, gpu_mem=%i, gpu_power=%i", gpu_util, gpu_mem_util, gpu_power);
