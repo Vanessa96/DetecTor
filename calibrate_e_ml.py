@@ -134,6 +134,7 @@ class MatMul(nn.Module):
     def forward(self, x, y):
         return torch.matmul(x, y)
 
+
 class BMM(nn.Module):
     def __init__(self):
         super().__init__()
@@ -141,13 +142,15 @@ class BMM(nn.Module):
     def forward(self, x, y):
         return torch.bmm(x, y)
 
+
 class EinSum(object):
     def __init__(self, transformation):
         super().__init__()
         self.transformation = transformation
-    
+
     def forward(self, *x):
         return torch.einsum(self.transformation, *x)
+
 
 def get_non_parametric_ml_ops(model, input_ids):
     # todo: add other non-parametric ops if there are any
@@ -183,7 +186,8 @@ def get_non_parametric_ml_ops(model, input_ids):
         if node.op == 'aten::bmm' and node.scope in non_param_scopes:
             args = node.inputs
             inputs = [torch.rand(arg.shape, dtype=torch.float,
-                                 device=model.device) for arg in args if arg.dtype != None and len(arg.shape) > 0]
+                                 device=model.device) for arg in args if
+                      arg.dtype != None and len(arg.shape) > 0]
             module_info = {'name': node.scope, 'module': BMM(),
                            'inputs': tuple(inputs),
                            'in_kwargs': {},
@@ -192,18 +196,20 @@ def get_non_parametric_ml_ops(model, input_ids):
         if node.op == 'aten::einsum' and node.scope in non_param_scopes:
             args = node.inputs
             inputs = []
+            transformation = None
             for arg in args:
                 if arg.dtype == 'str':
                     transformation = arg.extra['str']
                     continue
-                elif arg.dtype == None:
+                elif arg.dtype is None:
                     continue
                 elif len(arg.shape) == 0:
                     continue
-                input = torch.rand(arg.shape[0], dtype=torch.float,
-                                 device=model.device)
-                inputs.append(input)
-            module_info = {'name': node.scope, 'module': EinSum(transformation),
+                input_t = torch.rand(arg.shape[0], dtype=torch.float,
+                                     device=model.device)
+                inputs.append(input_t)
+            module_info = {'name': node.scope,
+                           'module': EinSum(transformation),
                            'inputs': tuple(inputs),
                            'in_kwargs': {},
                            }
@@ -238,12 +244,8 @@ def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
             continue
         module.register_forward_hook(log_end_builder(name))
 
-    if 't5' in model_name:
-        labels = torch.randint(1000, size=(batch_size, input_len)).long()
-        labels = labels.to(device)
-        _ = model(input_ids=inputs, decoder_input_ids=labels)
-    else:
-        _ = model(input_ids=inputs)
+    kwargs = {'decoder_input_ids': inputs} if hasattr(model, 'decoder') else {}
+    _ = model(inputs, **kwargs)
 
     information = defaultdict(list)
     for module_name in end_times.keys():
@@ -289,6 +291,7 @@ def main(args):
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
     information = get_module_info(args.model_name, args.batch_size,
                                   args.input_len, device, args.level_type)
+
 
 if __name__ == '__main__':
     main(parse_args())
