@@ -17,9 +17,9 @@ res_names = ['cpu', 'mem', 'gpu', 'gpu_mem']
 
 feature_names = ['batch_size', 'seq_len', 'flops',
                  'mem_bytes'] + res_names + [f'{k}_std' for k in res_names] + \
-                ['times_mean', 'times_std',
-                 'gpu_power_mean', 'gpu_power_std',
-                 'energy_mean', 'energy_std',
+                ['times_mean', 'times_std_percent',
+                 'gpu_energy_mean', 'gpu_energy_std_percent',
+                 'energy_mean', 'energy_std_percent',
                  'level_name', 'model_name']
 
 
@@ -99,12 +99,13 @@ def process_record(energy, prof_info, res, feature_values,
             res_r = res[res_s:res_e]
             for rn in res_names:
                 res_runs[rn].append(res_r[rn].mean())
-            gpu_power_r = res_r['gpu_power'].sum()
+            gpu_power_r = res_r['gpu_power'].div(repeats * 1e3).sum() * 0.17
             gpu_power_runs.append(gpu_power_r)
 
+            # sampling rate is 170 ms
             e_s = bisect.bisect_right(energy_t, start_r)
             e_e = bisect.bisect_right(energy_t, end_r)
-            energy_r = energy[e_s:e_e]['value'].div(repeats).sum()
+            energy_r = energy[e_s:e_e]['value'].div(repeats).sum() * 0.17
             energy_runs.append(energy_r)
 
         times_mean = np.mean(times_runs)
@@ -123,13 +124,13 @@ def process_record(energy, prof_info, res, feature_values,
         feature_values['batch_size'].append(bs)
         feature_values['seq_len'].append(seq_len)
         feature_values['energy_mean'].append(energy_mean)
-        feature_values['energy_std'].append(energy_std)
-        feature_values['gpu_power_mean'].append(gpu_power_mean)
-        feature_values['gpu_power_std'].append(gpu_power_std)
+        feature_values['energy_std_percent'].append(energy_std)
+        feature_values['gpu_energy_mean'].append(gpu_power_mean)
+        feature_values['gpu_energy_std_percent'].append(gpu_power_std)
         feature_values['flops'].append(flops)
         feature_values['mem_bytes'].append(mem_bytes)
         feature_values['times_mean'].append(times_mean)
-        feature_values['times_std'].append(times_std)
+        feature_values['times_std_percent'].append(times_std)
         feature_values['level_name'].append(prof_item['name'])
         feature_values['model_name'].append(model_name)
 
