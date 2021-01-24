@@ -49,6 +49,7 @@ def main(args):
     res_file = args.res_file or out_dir / f'{exp_name}-res.csv'
     energy_file = args.energy_file or out_dir / f'{exp_name}-energy.csv'
     res = pd.read_csv(res_file)
+    res = res.apply(pd.to_numeric)
     energy = pd.read_csv(energy_file, error_bad_lines=False, usecols=[0, 2])
     energy = energy[energy['value'].apply(lambda x: is_float(x))]
     energy = energy[energy['timestamp'].apply(lambda x: is_float(x))]
