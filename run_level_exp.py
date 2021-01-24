@@ -54,7 +54,7 @@ def calibrate_repeats(fn, fi, fi_kwargs, probe_repeats):
         needed += 1
         if end - start > 5:  # run 5 seconds
             break
-    repeats = needed * probe_repeats
+    repeats = max(probe_repeats, needed * probe_repeats)
     return repeats
 
 
