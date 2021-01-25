@@ -1,7 +1,10 @@
 import logging
 
+import pandas as pd
 import patchy
 import torch
+
+pd.set_option('display.float_format', '{:.6f}'.format)
 
 logger = logging.getLogger('nrg')
 
@@ -12,7 +15,6 @@ fmt = logging.Formatter(fmt_str, "%Y-%m-%d_%H:%M:%S")
 handler = logging.StreamHandler()
 handler.setFormatter(fmt)
 logger.addHandler(handler)
-
 
 patchy.patch(torch.nn.Module._call_impl, '''\
 @@ -1,35 +1,35 @@
@@ -58,3 +60,21 @@ patchy.patch(torch.nn.Module._call_impl, '''\
 def sanitize(model_name):
     # todo: more robust name sanitization
     return model_name.replace('/', '_')
+
+
+def is_float(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    return True
+
+
+def get_hw_energy(energy_file):
+    energy = pd.read_csv(energy_file, error_bad_lines=False, usecols=[0, 2])
+    energy = energy[energy['value'].apply(lambda x: is_float(x))]
+    energy = energy[energy['timestamp'].apply(lambda x: is_float(x))]
+
+    energy['value'] = energy['value'].astype(float).div(100)
+    energy['timestamp'] = energy['timestamp'].astype(float)
+    return energy

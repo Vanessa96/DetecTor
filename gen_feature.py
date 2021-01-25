@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from common import get_hw_energy
 from common import sanitize
 
 pd.set_option('display.float_format', '{:.6f}'.format)
@@ -21,14 +22,6 @@ feature_names = ['batch_size', 'seq_len', 'flops',
                  'gpu_energy_mean', 'gpu_energy_std_percent',
                  'energy_mean', 'energy_std_percent',
                  'level_name', 'model_name']
-
-
-def is_float(x):
-    try:
-        float(x)
-    except ValueError:
-        return False
-    return True
 
 
 def main(args):
@@ -50,12 +43,7 @@ def main(args):
     energy_file = args.energy_file or out_dir / f'{exp_name}-energy.csv'
     res = pd.read_csv(res_file)
     res = res.apply(pd.to_numeric)
-    energy = pd.read_csv(energy_file, error_bad_lines=False, usecols=[0, 2])
-    energy = energy[energy['value'].apply(lambda x: is_float(x))]
-    energy = energy[energy['timestamp'].apply(lambda x: is_float(x))]
-
-    energy['value'] = energy['value'].astype(float).div(100)
-    energy['timestamp'] = energy['timestamp'].astype(float)
+    energy = get_hw_energy(energy_file)
     infos = []
     for model_name in args.models:
         feature_values = {k: [] for k in feature_names}
@@ -71,7 +59,7 @@ def main(args):
                     prof_info = json.load(f)
                 process_record(energy, prof_info, res, feature_values,
                                model_name, bs, runs, seq_len)
-        info = pd.DataFrame(data=feature_values)
+        info = pd.DataFrame(data=feature_values).dropna()
         infos.append(info)
         print(f'{model_name} done.')
     pd.concat(infos).to_csv(feature_file, index=False)
