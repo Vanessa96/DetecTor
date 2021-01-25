@@ -91,7 +91,7 @@ def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
     return model_prof
 
 
-level_sigs = set()
+level_sigs = dict()
 
 
 def wrapped_partial(func, *args, **kwargs):
@@ -137,10 +137,8 @@ def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs,
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
 
     if sig in level_sigs:
-        logger.info(f'already profiled {sig} level, skip')
-        return None
-    else:
-        level_sigs.add(sig)
+        logger.info(f'{fname} already profiled, return value from {sig}')
+        return level_sigs[sig]
     calibrated_repeats = calibrate_repeats(fn, fi, fi_kwargs, probe_repeats)
     level_prof['repeats'] = calibrated_repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_name}, '
@@ -156,6 +154,7 @@ def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs,
         logger.info(f'run {model_name}_b{bs}_i{seq_len}_{level_name}, '
                     f'({run}/{runs}) {fname} done.')
         time.sleep(1)  # sleep 1s to cool down
+    level_sigs[sig] = level_prof
     return level_prof
 
 
