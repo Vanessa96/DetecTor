@@ -47,9 +47,24 @@ done
 
 declare -a models=("bert-base-uncased" "distilbert-base-uncased" "roberta-base")
 
-r=3
-for b in `seq 32 -4 4`; do
-  for i in `seq 512 -16 16`; do
+declare -a models=("bert-large-uncased" "google/mobilebert-uncased" "albert-base-v2" "albert-large-v2" "roberta-large" "openai-gpt" "gpt2" "sshleifer/tiny-gpt2" "distilgpt2" "sshleifer/tiny-ctrl" "facebook/bart-base" "facebook/bart-large" "sshleifer/distilbart-xsum-6-6" "valhalla/distilbart-mnli-12-3" "t5-small")
+
+declare -a models=("squeezebert/squeezebert-uncased" "huawei-noah/TinyBERT_General_4L_312D" "xlnet-base-cased" "funnel-transformer/small" "google/electra-small-discriminator" "google/mobilebert-uncased" "facebook/bart-base" "facebook/bart-large" "sshleifer/distilbart-xsum-6-6" "valhalla/distilbart-mnli-12-3" "t5-small")
+
+
+r=1
+b=8
+i=128
+for model in "${models[@]}"; do
+  echo ${i},${b}=$(($i * $b))
+  python run_level_exp.py -t ml-np -o data/ml-exp-jpc -r ${r} -b ${b} -i ${i} -m ${model} -n 100 2>&1 | tee data/logs/ml-np-jpc-${model}-b${b}-i${i}.log
+  python run_level_exp.py -t ml -o data/ml-exp-jpc -r ${r} -b ${b} -i ${i} -m ${model}  -n 100 2>&1 | tee data/logs/ml-jpc-${model}-b${b}-i${i}.log
+  python run_level_exp.py -t module -o data/module-exp-jpc -r ${r} -b ${b} -i ${i} -m ${model} -n 50 2>&1 | tee data/logs/module-jpc-${model}-b${b}-i${i}.log
+  python run_level_exp.py -t model -o data/model-exp-jpc -r ${r} -b ${b} -i ${i} -m ${model} -n 10 2>&1 | tee data/logs/model-jpc-${model}-b${b}-i${i}.log
+done
+
+for b in `seq 4 4 32`; do
+  for i in `seq 8 8 256`; do
     for model in "${models[@]}"; do
       echo ${i},${b}=$(($i * $b))
       python run_level_exp.py -t ml-np -o data/ml-exp-jpc -r ${r} -b ${b} -i ${i} -m ${model} -n 100 2>&1 | tee data/logs/ml-np-jpc-b${b}-i${i}.log
@@ -72,17 +87,58 @@ for b in `seq 8 8 32`; do
 done
 done
 
-for b in `seq 32 -4 4`; do
-  for i in `seq 384 -16 16`; do
+"google/mobilebert-uncased" "huawei-noah/TinyBERT_General_4L_312D" "google/electra-small-discriminator" "albert-base-v2" "openai-gpt" "gpt2" "sshleifer/tiny-gpt2" "distilgpt2" "sshleifer/tiny-ctrl" 
+
+declare -a models=("facebook/bart-base" "squeezebert/squeezebert-uncased" "sshleifer/distilbart-xsum-6-6")
+
+r=1
+b=8
+i=128
+machine="jpc"
+for model in "${models[@]}"; do
+  python run_level_exp.py -t ml-np -o data/ml-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model} -n 100 2>&1 | tee data/logs/ml-np-${machine}-${model//\//_}-b${b}-i${i}.log
+  python run_level_exp.py -t ml -o data/ml-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model}  -n 100 2>&1 | tee data/logs/ml-${machine}-${model//\//_}-b${b}-i${i}.log
+  python run_level_exp.py -t module -o data/module-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model} -n 50 2>&1 | tee data/logs/module-${machine}-${model//\//_}-b${b}-i${i}.log
+  python run_level_exp.py -t model -o data/model-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model} -n 10 2>&1 | tee data/logs/model-${machine}-${model//\//_}-b${b}-i${i}.log
+done
+
+declare -a models=("huawei-noah/TinyBERT_General_4L_312D" "google/electra-small-discriminator" "albert-base-v2" "sshleifer/tiny-gpt2")
+
+declare -a models=("bert-base-uncased" "distilbert-base-uncased" "roberta-base" "distilgpt2"  "openai-gpt" "gpt2" "google/mobilebert-uncased" "sshleifer/tiny-ctrl")
+r=1
+machine="jpc"
+for b in `seq 8 8 32`; do
+  for i in `seq 32 32 256`; do
+    for model in "${models[@]}"; do
+      echo ${i},${b}=$(($i * $b))
+      python run_level_exp.py -t ml-np -o data/ml-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model} -n 100 2>&1 | tee data/logs/ml-np-${machine}-${model//\//_}-b${b}-i${i}.log
+      python run_level_exp.py -t ml -o data/ml-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model}  -n 100 2>&1 | tee data/logs/ml-${machine}-${model//\//_}-b${b}-i${i}.log
+      python run_level_exp.py -t module -o data/module-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model} -n 50 2>&1 | tee data/logs/module-${machine}-${model//\//_}-b${b}-i${i}.log
+      python run_level_exp.py -t model -o data/model-exp-${machine} -r ${r} -b ${b} -i ${i} -m ${model} -n 10 2>&1 | tee data/logs/model-${machine}-${model//\//_}-b${b}-i${i}.log
+    done
+  done
+done
+
+for b in `seq 8 8 32`; do
+  for i in `seq 32 32 256`; do
     echo echo ${i},${b}=$(($i * $b))
   done
 done | wc -l
 
-python gen_feature.py -o data/qpc -t module -e module-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+  for b in `seq 4 4 32`; do
+    for i in `seq 8 8 384`; do
 
-python gen_feature.py -o data/qpc -t ml -e ml-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
 
-python gen_feature.py -o data/qpc -t ml-np -e ml-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+data_dir="data/exp/qpc-new"
+energy_file="${data_dir}/all-exp-qpc-energy.csv"
+res_file="${data_dir}/all-exp-qpc-res.csv"
+declare -a models=("bert-base-uncased" "distilbert-base-uncased" "roberta-base" "distilgpt2"  "openai-gpt" "gpt2" "google/mobilebert-uncased" "sshleifer/tiny-ctrl")
 
-python gen_feature.py -o data/qpc -t model -e model-exp-qpc -ef data/qpc/three-exp-energy.csv -rf data/qpc/three-exp-res.csv -m "bert-base-uncased" "distilbert-base-uncased" "roberta-base" -r 3 --input_start 32 --seq_step 32 --input_length 160 --batch_start 24 --batch_step 8 --batch_size 40
+for level in module ml model ml-np; do
+  echo ${level//-np/}-exp-qpc
+  python gen_feature.py -o ${data_dir} -t ${level} -e ${level//-np/}-exp-qpc -ef ${energy_file} -rf ${res_file} -m ${models[@]}  -r 1 --input_start 32 --seq_step 32 --input_length 257 --batch_start 8 --batch_step 8 --batch_size 33
+done
+
+
+scp -i .ssh/id_rsa_epi-jpc pi@130.245.145.100:~/emonpi/firmware/all-exp-jpc-energy.csv .
 
