@@ -65,6 +65,7 @@ def main(args):
                 filename = f'{name_s}_{exp_type}_r{runs}_b{bs}_i{seq_len}.json'
                 prof_file = Path(out_dir) / exp_name / filename
                 if not prof_file.exists():
+                    print(f'{prof_file} not exist!')
                     continue
                 with open(prof_file) as f:
                     prof_info = json.load(f)
