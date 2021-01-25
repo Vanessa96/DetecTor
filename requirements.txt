@@ -1,5 +1,5 @@
-# experiment-impact-tracker==0.1.8
-natsort==7.1.0
+experiment-impact-tracker==0.1.8
+natsort==7.1.1
 pandas==1.2.1
 parse==1.19.0
 patchy==2.2.0

@@ -187,6 +187,12 @@ def main(args):
     information = get_module_info(model_name, bs, seq_len, device,
                                   level_type)
     if level_type == 'model':
+        if args.log_energy_consumption:
+            from experiment_impact_tracker.compute_tracker import ImpactTracker
+
+            logger.info("Launching impact tracker...")
+            tracker = ImpactTracker(args.energy_output_dir)
+            tracker.launch_impact_monitor()
         prof_info = run_model(model_name, bs, seq_len,
                               probe_repeats, runs, device)
         model_prof_info.append(prof_info)
@@ -225,4 +231,9 @@ if __name__ == "__main__":
                              "HuggingFace Transformers library")
     parser.add_argument("-nc", "--no_cuda", action="store_true",
                         help="Whether not to use CUDA when available")
+    parser.add_argument("-le", "--log_energy_consumption", action="store_true",
+                        help="Whether to track energy consumption")
+    parser.add_argument("-eo", "--energy_output_dir", type=str,
+                        help="model string supported by the "
+                             "HuggingFace Transformers library")
     main(parser.parse_args())
