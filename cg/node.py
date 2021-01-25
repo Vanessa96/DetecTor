@@ -102,6 +102,7 @@ def _process_data_nodes(node_inputs, data_nodes):
             dtype = str(node_type)
             shape = []
             extra['str'] = ni.toIValue()
+            # fixme: for einsum (like albert), need to expand ListConstruct
         elif isinstance(node_type, torch.IntType):
             dtype = 'int'
             shape = []
