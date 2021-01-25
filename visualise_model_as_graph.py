@@ -24,6 +24,8 @@ class TreeNode(object):
         self.parent_name = parent_name
         self.child_nodes = []
         self.callable_module = callable_module
+        self.flops = 0
+        self.mem_bytes = 0
 
     def __str__(self):
         ret = "(" + self.scope.split('.')[-1]
@@ -170,6 +172,7 @@ def run_model_to_graph(model_name, device, out_file):
     root, tree = create_tree_from_modules(model)
 
     # for math ops, look into jit trace, create nodes accordingly and add them to correct position in model graph
+    # for other ops, add memory and flops information that is in jit trace to the tree nodes
     for scope, node_ids in scope_to_node_ids_map.items():
         for node_id in node_ids:
             jit_node = id_to_node_map[node_id]
@@ -178,9 +181,12 @@ def run_model_to_graph(model_name, device, out_file):
                     scope_to_match = 'root'
                 else:
                     scope_to_match = 'root.' + jit_node.scope
+                node_in_position = tree[scope_to_match]
+                node_in_position.flops = jit_node.flops
+                node_in_position.mem_bytes = jit_node.mem_bytes
+                # breakpoint()
                 if jit_node.op not in ['aten::matmul', 'aten::bmm', 'aten::einsum', 'aten::softmax']:
                     continue
-                node_in_position = tree[scope_to_match]
                 if node_in_position.instance_type in ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', \
                        'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', \
                        'Conv1D']:
