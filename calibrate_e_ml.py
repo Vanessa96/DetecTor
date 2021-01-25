@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 __author__ = "Yash Kumar Lal"
 
+from typing import Optional
+
 from cg.node import construct_aggregation_graph
 
 """
@@ -143,7 +145,8 @@ class BMM(nn.Module):
         return torch.bmm(x, y)
 
 
-class EinSum(object):
+class EinSum(nn.Module):
+
     def __init__(self, transformation):
         super().__init__()
         self.transformation = transformation
