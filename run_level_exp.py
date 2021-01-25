@@ -32,8 +32,7 @@ def get_flops_mem_bytes(graph):
     return sum(flops.values()), sum(mem_bytes.values())
 
 
-def get_model_flops_mem_bytes(module_fn, inputs, module_name):
-    device = inputs[0].device
+def get_model_flops_mem_bytes(module_fn, inputs, module_name, device):
     cpu_inputs = tuple([i.cpu() for i in inputs])
     trace = torch.jit.trace(module_fn.cpu(), cpu_inputs)
     trace_graph = trace.inlined_graph
@@ -71,7 +70,8 @@ def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
     if config.model_type == 't5':
         #  attention_mask=None, decoder_input_ids=None
         inputs = (input_ids, input_ids)
-    flops, mem_bytes = get_model_flops_mem_bytes(model, inputs, model_name)
+    flops, mem_bytes = get_model_flops_mem_bytes(model, inputs,
+                                                 model_name, device)
     model_prof = dict(name=model_name, flops=flops, mem_bytes=mem_bytes)
     repeats = calibrate_repeats(model, inputs, {}, probe_repeats)
     model_prof['repeats'] = repeats
@@ -101,7 +101,7 @@ def wrapped_partial(func, *args, **kwargs):
     return partial_func
 
 
-def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs,
+def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs, device,
                      level, level_name):
     # # uncomment support specific ML levels
     # if level_name != 'linear':
@@ -132,7 +132,7 @@ def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs,
     # wrap forward into traceable fn (only tensor args)
     # https://github.com/pytorch/pytorch/issues/14455#issuecomment-445962680
     fn.forward = wrapped_partial(fn.forward, **fill_args)
-    flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname)
+    flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname, device)
     fn.forward = fn_fwd
     sig = f"{level_name},{flops},{mem_bytes}"
     level_prof = dict(name=fname, flops=flops, mem_bytes=mem_bytes)
@@ -194,7 +194,7 @@ def main(args):
         for level_name, levels in information.items():
             for level in levels:
                 prof_info = run_ml_or_module(model_name, bs, seq_len,
-                                             probe_repeats, runs,
+                                             probe_repeats, runs, device,
                                              level, level_name)
                 if prof_info is None:
                     continue
