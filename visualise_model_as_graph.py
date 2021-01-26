@@ -88,14 +88,14 @@ def graphviz_representation(tree):
 
         if node.instance_type in ml_ops_name:
             dot.attr('node', style='filled', fillcolor='#F4D1AE', fontsize='22',
-                     color='orange', shape='oval')
+                     color='orange', shape='rectangle')
             node_suffix = f':{node_name}'
         elif node.instance_type in math_ops_name:
             dot.attr('node', style='filled', fillcolor='#E1C9B2', fontsize='22',
-                     color='#CD887D', shape='oval')
+                     color='#CD887D', shape='rectangle')
         else:
             dot.attr('node', style='filled', fillcolor='#DCE9F2', fontsize='22',
-                     color='#007AC5', shape='rectangle')
+                     color='#007AC5', shape='oval')
         node_label = node.instance_type + node_suffix
         dot.node(str(node_count), node_label)
         graphviz_node_id_mapping[node.scope] = str(node_count)
