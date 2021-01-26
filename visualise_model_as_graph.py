@@ -5,6 +5,7 @@ __author__ = "Yash Kumar Lal"
 import argparse
 import time
 from collections import defaultdict
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -193,15 +194,18 @@ def run_model_to_graph(model_name, device, out_file):
 
 def main(args):
     cuda_exist = torch.cuda.is_available()
-    device = torch.device("cuda" if cuda_exist and not cuda_available 
-                                    else "cpu")
+    device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
 
     root, tree = run_model_to_graph(args.model_name, device, args.out_file)
 
     dot = graphviz_representation(tree)
 
     # save graphviz representation to file, then use shell command to generate final graph image
-    with open(args.out_file, 'w+') as fp:
+    out_file = Path(args.out_file)
+    out_dir = out_file.parent
+    if not out_dir.exists():
+        out_dir.mkdir(parents=True, exist_ok=True)
+    with open(out_file, 'w+') as fp:
         fp.write(dot.source)
 
     # in shell, run ```dot -Tpdf args.out_file -o final_graph_file.pdf``` to finally generate graph from source code saved above
