@@ -40,7 +40,7 @@ def main(args):
     with open(prof_info_file) as f:
         prof_item = json.load(f)[0]
         repeats = prof_item['repeats']
-    sw_avg_energy = sw_energy * 3.6e6 / repeats
+    sw_avg_energy = sw_energy * 3.6e6 / repeats / runs
 
     energy_np = hw_energy.to_numpy()
     energy_t = energy_np[:, 0]
