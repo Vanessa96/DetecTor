@@ -154,6 +154,7 @@ int main(int argc, char ** argv) {
   }
   
   unsigned long print_count = 0;
+  unsigned int print_gap = 10;
   struct cpustat cpu_util_prev, cpu_util_cur;
   struct meminfo mem_util;
   get_stats(&cpu_util_prev, -1);
@@ -173,7 +174,7 @@ int main(int argc, char ** argv) {
     
     sample_time = gettime();
     fprintf(output_file, "%.6f,%.1f,%.1f,%i", sample_time/1e6, cpu_util, mem_usage, device_count);
-    if (print_count%10==0)
+    if (print_count%print_gap==0)
     {
       printf("\33[2K\r");
       printf("t=%.6f, cpu=%.1f, mem=%.1f, n_gpu=%i", sample_time/1e6, cpu_util, mem_usage, device_count);
@@ -201,14 +202,27 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
         return nv_status;
       }
-      fprintf(output_file, ",%i,%i,%i", gpu_util, gpu_mem_util, gpu_power);
-      if (print_count%10==0)
+      unsigned int sm_clock;
+      unsigned int mem_clock;
+
+      nv_status = nvmlDeviceGetClock(device, NVML_CLOCK_SM, NVML_CLOCK_ID_CURRENT, &sm_clock);
+      if (NVML_SUCCESS != nv_status){
+        fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+        return nv_status;
+      }
+      nv_status = nvmlDeviceGetClock(device, NVML_CLOCK_MEM, NVML_CLOCK_ID_CURRENT, &mem_clock);
+      if (NVML_SUCCESS != nv_status){
+        fprintf(stderr, "error: %s\n", nvmlErrorString(nv_status));
+        return nv_status;
+      }
+      fprintf(output_file, ",%i,%i,%i,%i,%i", gpu_util, gpu_mem_util, gpu_power, sm_clock, mem_clock);
+      if (print_count%print_gap==0)
       {
-        printf(", gpu=%i, gpu_mem=%i, gpu_power=%i", gpu_util, gpu_mem_util, gpu_power);
+        printf(", gpu=%i, gpu_mem=%i, gpu_power=%i, sm_clock=%i, gpu_mem_clock=%i", gpu_util, gpu_mem_util, gpu_power, sm_clock, mem_clock);
       }
     }
     fprintf(output_file, "\n");
-    if (print_count%10==0)
+    if (print_count%print_gap==0)
     {
       printf("\n");
     }
