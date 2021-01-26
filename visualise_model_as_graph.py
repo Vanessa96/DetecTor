@@ -16,6 +16,7 @@ from cg.node import construct_aggregation_graph
 from run_level_exp import construct_aggregation_graph
 from graphviz import Digraph
 import copy
+import sys
 
 class TreeNode(object):
     def __init__(self, scope, instance_type, level, parent_name, callable_module):
@@ -116,22 +117,33 @@ def create_tree_from_modules(model):
     model_operation_information = []
 
     # create an iterable list of module information since model.named_modules does not function as a true list
+    module_list_scope_names = []
     for (name, module) in model.named_modules():
         mname = module.__class__.__name__
         if name == '':
             prefix = 'root'
+        elif mname == 'ModuleList':
+            module_list_scope_name = name.split('.')[-1]
+            module_list_scope_names.append(module_list_scope_name)
+            continue
         else:
             prefix = 'root.'
+        tmp_scope_name = prefix+name
+        scope_name = '.'.join([arg for arg in tmp_scope_name.split('.') if arg not in module_list_scope_names])
         model_operation_information.append((prefix+name, mname, module))
 
     # add prefix to every node's scope since, by default, the root node of a graph in PyTorch has empty string as scope
     for operations in model_operation_information:
         scope = operations[0]
+        mname = operations[1]
         module = operations[2]
         if scope == 'root':
             parent_name = ''
+        elif mname == 'ModuleList':
+            continue
         else:
-            parent_name = '.'.join(scope.split('.')[:-1])
+            scope_name = '.'.join([arg for arg in scope.split('.') if arg not in module_list_scope_names])
+            parent_name = '.'.join(scope_name.split('.')[:-1])
 
     root_operation = model_operation_information[0]
     root = TreeNode('root', root_operation[1], 0, '', operations[2])
@@ -143,8 +155,11 @@ def create_tree_from_modules(model):
     parent_child_nodes = defaultdict(list)
     for operations in model_operation_information[1:]:
         scope = operations[0]
+        scope = '.'.join([arg for arg in scope.split('.') if arg not in module_list_scope_names])
         instance_type = operations[1]
         if instance_type == 'Dropout':
+            continue
+        if instance_type == 'ModuleList':
             continue
         module = operations[2]
         level = len(scope.split('.')) - 1
@@ -157,7 +172,7 @@ def create_tree_from_modules(model):
     for name, node in tree.items():
         node.child_nodes = parent_child_nodes[name]
 
-    return root, tree
+    return root, tree, module_list_scope_names
 
 def run_model_to_graph(model_name, device, out_file):
     model = load_model(model_name)
@@ -169,6 +184,8 @@ def run_model_to_graph(model_name, device, out_file):
     trace_graph = trace.inlined_graph
     graph, _ = construct_aggregation_graph(trace_graph, model_name)
 
+    root, tree, module_list_scope_names = create_tree_from_modules(model)
+
     # these dictionaries are important when reconciling jit trace to the tree created from modules
     id_to_node_map = dict()
     scope_to_node_ids_map = defaultdict(list)
@@ -177,9 +194,8 @@ def run_model_to_graph(model_name, device, out_file):
         node_scope = node.scope
         if node.scope == '':
             node_scope = 'root'
-        scope_to_node_ids_map[node_scope].append(node.id)
-
-    root, tree = create_tree_from_modules(model)
+        scope_name = '.'.join([arg for arg in node_scope.split('.') if arg not in module_list_scope_names])
+        scope_to_node_ids_map[scope_name].append(node.id)
 
     # for math ops, look into jit trace, create nodes accordingly and add them to correct position in model graph
     for scope, node_ids in scope_to_node_ids_map.items():
@@ -190,6 +206,7 @@ def run_model_to_graph(model_name, device, out_file):
                     scope_to_match = 'root'
                 else:
                     scope_to_match = 'root.' + jit_node.scope
+                scope_to_match = '.'.join([arg for arg in scope_to_match.split('.') if arg not in module_list_scope_names])
                 if jit_node.op not in ['aten::matmul', 'aten::bmm', 'aten::einsum', 'aten::softmax']:
                     continue
                 node_in_position = tree[scope_to_match]
