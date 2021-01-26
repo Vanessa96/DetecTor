@@ -221,13 +221,13 @@ def run_model_to_graph(model_name, device, batch_size, seq_len):
                 new_node = TreeNode(new_scope_name, jit_node.op.split('::')[-1], node_in_position.level+1, node_in_position.scope, jit_node.op)
                 node_in_position.child_nodes.append(new_node)
                 tree[new_node.scope] = new_node
-    return root, tree
+    return root, tree, module_list_scope_names
 
 def main(args):
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
 
-    root, tree = run_model_to_graph(args.model_name, device, 16, 256)
+    root, tree, _ = run_model_to_graph(args.model_name, device, 16, 256)
 
     dot = graphviz_representation(tree)
 
