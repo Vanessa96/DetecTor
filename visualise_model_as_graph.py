@@ -76,24 +76,35 @@ def graphviz_representation(tree):
     math_ops_name = ['matmul', 'bmm', 'softmax', 'einsum']
     ml_ops_name = ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', 'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', 'Conv1D']
 
-    dot = Digraph(comment='Model Graph')
+    dot = Digraph(comment='Model Graph',
+                  graph_attr=dict(rankdir='LR'))
     node_count = 0
     graphviz_node_id_mapping = {}
     # first create nodes with their labels
     for key, node in tree.items():
+        node_name = node.scope.split('.')[-1]
+        node_suffix = f':{node_name}' if node_name.isnumeric() else ''
+
         if node.instance_type in ml_ops_name:
-            dot.attr('node', color='red', shape='oval')
+            dot.attr('node', style='filled', fillcolor='#F4D1AE', fontsize='22',
+                     color='orange', shape='oval')
+            node_suffix = f':{node_name}'
         elif node.instance_type in math_ops_name:
-            dot.attr('node', color='blue', shape='diamond')
+            dot.attr('node', style='filled', fillcolor='#E1C9B2', fontsize='22',
+                     color='#CD887D', shape='oval')
         else:
-            dot.attr('node', color='black', shape='rectangle')
-        dot.node(str(node_count), node.scope.split('.')[-1] + ':' + node.instance_type)
+            dot.attr('node', style='filled', fillcolor='#DCE9F2', fontsize='22',
+                     color='#007AC5', shape='rectangle')
+        node_label = node.instance_type + node_suffix
+        dot.node(str(node_count), node_label)
         graphviz_node_id_mapping[node.scope] = str(node_count)
         node_count += 1
     # add edges between nodes using node ids assigned in previous loop
     for key, node in tree.items():
         for child_node in node.child_nodes:
-            dot.edge(graphviz_node_id_mapping[node.scope], graphviz_node_id_mapping[child_node.scope])
+            dot.edge(graphviz_node_id_mapping[node.scope],
+                     graphviz_node_id_mapping[child_node.scope],
+                     arrowsize='.5', weight='2.')
     return dot
 
 def create_tree_from_modules(model):
