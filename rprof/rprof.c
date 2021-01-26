@@ -162,7 +162,7 @@ int main(int argc, char ** argv) {
   fprintf(output_file, "timestamp,cpu,mem,n_gpu");
   for (unsigned device_idx = 0; device_idx < device_count; device_idx++)
   {
-    fprintf(output_file, ",gpu,gpu_mem,gpu_power");
+    fprintf(output_file, ",gpu,gpu_mem,gpu_power,gpu_clk,gpu_mem_clk");
   }
   fprintf(output_file, "\n");
   while (interrupt == 0 && (sample_time - start_time) < timeout)
