@@ -16,7 +16,7 @@ from cg.node import construct_aggregation_graph
 from run_level_exp import construct_aggregation_graph
 from graphviz import Digraph
 import copy
-import sys
+from functools import lru_cache
 
 class TreeNode(object):
     def __init__(self, scope, instance_type, level, parent_name, callable_module):
@@ -61,11 +61,13 @@ def parse_args():
     args, _ = parser.parse_known_args()
     return args
 
+@lru_cache(maxsize=1024)
 def load_model(model_name):
     config = AutoConfig.from_pretrained(model_name)
     config.torchscript = True
     model = AutoModel.from_config(config)
-    torch.set_grad_enabled(False)
+    for parameters in model.parameters():
+    	parameters.requires_grad_(False)
     return model
 
 def graphviz_representation(tree):
@@ -174,9 +176,10 @@ def create_tree_from_modules(model):
 
     return root, tree, module_list_scope_names
 
-def run_model_to_graph(model_name, device, out_file):
+@lru_cache(maxsize=1024)
+def run_model_to_graph(model_name, device, batch_size, seq_len):
     model = load_model(model_name)
-    inputs = torch.randint(1000, size=(16, 256)).long()
+    inputs = torch.randint(1000, size=(batch_size, seq_len)).long()
     model = model.eval().to(device)
     inputs = inputs.to(device)
 
@@ -224,7 +227,7 @@ def main(args):
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
 
-    root, tree = run_model_to_graph(args.model_name, device, args.out_file)
+    root, tree = run_model_to_graph(args.model_name, device, 16, 256)
 
     dot = graphviz_representation(tree)
 
