@@ -110,6 +110,7 @@ def graphviz_representation(tree):
                      arrowsize='.5', weight='2.')
     return dot
 
+@lru_cache(maxsize=1024)
 def create_tree_from_modules(model):
 
     """
@@ -177,9 +178,9 @@ def create_tree_from_modules(model):
     return root, tree, module_list_scope_names
 
 @lru_cache(maxsize=1024)
-def run_model_to_graph(model_name, device, batch_size, seq_len):
+def run_model_to_graph(model_name, device):
     model = load_model(model_name)
-    inputs = torch.randint(1000, size=(batch_size, seq_len)).long()
+    inputs = torch.randint(1000, size=(8, 32)).long()
     model = model.eval().to(device)
     inputs = inputs.to(device)
 
@@ -227,7 +228,7 @@ def main(args):
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and not args.no_cuda else "cpu")
 
-    root, tree, _ = run_model_to_graph(args.model_name, device, 16, 256)
+    root, tree, _ = run_model_to_graph(args.model_name, device)
 
     dot = graphviz_representation(tree)
 
