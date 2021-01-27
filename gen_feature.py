@@ -14,7 +14,7 @@ from common import get_hw_energy
 from common import sanitize
 
 pd.set_option('display.float_format', '{:.6f}'.format)
-res_names = ['cpu', 'mem', 'gpu', 'gpu_mem']
+res_names = ['cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk']
 
 feature_names = ['batch_size', 'seq_len', 'flops',
                  'mem_bytes'] + res_names + [f'{k}_std' for k in res_names] + \
