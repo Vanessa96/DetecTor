@@ -81,7 +81,8 @@ def is_ml_operation(module):
 
     e_ml_operations = {nn.Linear, nn.LayerNorm, nn.Embedding, nn.BatchNorm1d,
                        nn.Conv1d, nn.MaxPool1d, nn.AvgPool1d, nn.LSTM, nn.Tanh,
-                       modeling_utils.Conv1D}
+                       modeling_utils.Conv1D, nn.LogSigmoid, nn.ReLU, nn.Sigmoid,
+                       nn.GELU, nn.LeakyReLU}
 
     for e_ml_op in e_ml_operations:
         if isinstance(module, e_ml_op):

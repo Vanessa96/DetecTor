@@ -77,7 +77,7 @@ def graphviz_representation(tree):
     """
 
     math_ops_name = ['matmul', 'bmm', 'softmax', 'einsum']
-    ml_ops_name = ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', 'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', 'Conv1D']
+    ml_ops_name = ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', 'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', 'Conv1D', 'LogSigmoid', 'ReLU', 'Sigmoid', 'GELU', 'LeakyReLU']
 
     dot = Digraph(comment='Model Graph',
                   graph_attr=dict(rankdir='LR'))
@@ -216,7 +216,7 @@ def run_model_to_graph(model_name, device):
                 node_in_position = tree[scope_to_match]
                 if node_in_position.instance_type in ['Linear', 'LayerNorm', 'Embedding', 'BatchNorm1d', \
                        'Conv1d', 'MaxPool1d', 'AvgPool1d', 'LSTM', 'Tanh', \
-                       'Conv1D']:
+                       'Conv1D', 'LogSigmoid', 'ReLU', 'Sigmoid', 'GELU', 'LeakyReLU']:
                     continue
                 new_scope_name = scope_to_match + '.' + jit_node.op.split('::')[-1]
                 new_node = TreeNode(new_scope_name, jit_node.op.split('::')[-1], node_in_position.level+1, node_in_position.scope, jit_node.op)
