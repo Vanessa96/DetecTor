@@ -27,6 +27,16 @@ class TreeNode(object):
         self.child_nodes = []
         self.callable_module = callable_module
 
+        self.features = None
+        self.batch_size = None
+        self.seq_len = None
+        self.gold_energy = None
+        self.predicted_energy = None
+        self.loss = None
+        self.percentage_error = None
+        self.subtree_loss = None
+        self.subtree_percentage_error = None
+
     def __str__(self):
         ret = "(" + self.scope.split('.')[-1]
         for child in self.child_nodes:
