@@ -221,10 +221,12 @@ def get_non_parametric_ml_ops(model, input_ids):
     return information
 
 
-def get_module_info(model_name, batch_size, input_len, device, level_type='ml'):
+def get_module_info(model_name, batch_size, input_len, device,
+                    level_type='ml', multi_gpu=False):
     model = load_model(model_name)
     model = model.eval().to(device)
-
+    if multi_gpu:
+        model = torch.nn.DataParallel(model)
     inputs = torch.randint(1000, size=(batch_size, input_len)).long()
     inputs = inputs.to(device)
     if 't5' in model_name:

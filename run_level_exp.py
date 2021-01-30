@@ -58,12 +58,13 @@ def calibrate_repeats(fn, fi, fi_kwargs, probe_repeats):
     return repeats * 4
 
 
-def run_model(model_name, bs, seq_len, probe_repeats, runs, device):
+def run_model(model_name, bs, seq_len, probe_repeats, runs, device, multi_gpu):
     config = AutoConfig.from_pretrained(model_name)
     config.torchscript = True
     model = AutoModel.from_config(config)
     model = model.eval().to(device)
-
+    if multi_gpu:
+        model = torch.nn.DataParallel(model)
     input_ids = torch.randint(1000, size=(bs, seq_len), dtype=torch.long,
                               device=device)
     inputs = (input_ids,)
@@ -169,6 +170,7 @@ def main(args):
 
     torch.set_grad_enabled(False)
     use_cuda = not args.no_cuda
+    multi_gpu = args.multi_gpu
     cuda_exist = torch.cuda.is_available()
     device = torch.device("cuda" if cuda_exist and use_cuda else "cpu")
     seq_len = args.input_length
@@ -184,8 +186,6 @@ def main(args):
     if prof_info_file.exists():
         logger.info(f'{filename} already profiled, skip')
         return
-    information = get_module_info(model_name, bs, seq_len, device,
-                                  level_type)
     if level_type == 'model':
         if args.log_energy_consumption:
             from experiment_impact_tracker.compute_tracker import ImpactTracker
@@ -194,9 +194,11 @@ def main(args):
             tracker = ImpactTracker(args.energy_output_dir)
             tracker.launch_impact_monitor()
         prof_info = run_model(model_name, bs, seq_len,
-                              probe_repeats, runs, device)
+                              probe_repeats, runs, device, multi_gpu)
         model_prof_info.append(prof_info)
     else:
+        information = get_module_info(model_name, bs, seq_len, device,
+                                      level_type, multi_gpu)
         for level_name, levels in information.items():
             for level in levels:
                 prof_info = run_ml_or_module(model_name, bs, seq_len,
@@ -233,6 +235,8 @@ if __name__ == "__main__":
                         help="Whether not to use CUDA when available")
     parser.add_argument("-le", "--log_energy_consumption", action="store_true",
                         help="Whether to track energy consumption")
+    parser.add_argument("-mg", "--multi_gpu", action="store_true",
+                        help="Whether to all gpus or not")
     parser.add_argument("-eo", "--energy_output_dir", type=str,
                         help="model string supported by the "
                              "HuggingFace Transformers library")
