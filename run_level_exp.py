@@ -103,7 +103,7 @@ def wrapped_partial(func, *args, **kwargs):
 
 
 def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs, device,
-                     level, level_name):
+                     level, level_name, multi_gpu=False):
     # # uncomment support specific ML levels
     # if level_name != 'linear':
     #     return None
@@ -143,6 +143,8 @@ def run_ml_or_module(model_name, bs, seq_len, probe_repeats, runs, device,
         cached_prof = copy.deepcopy(level_sigs[sig])
         cached_prof['name'] = fname
         return cached_prof
+    if multi_gpu:
+        fn = torch.nn.DataParallel(fn)
     calibrated_repeats = calibrate_repeats(fn, fi, fi_kwargs, probe_repeats)
     level_prof['repeats'] = calibrated_repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}_{level_name}, '
@@ -198,12 +200,12 @@ def main(args):
         model_prof_info.append(prof_info)
     else:
         information = get_module_info(model_name, bs, seq_len, device,
-                                      level_type, multi_gpu)
+                                      level_type)
         for level_name, levels in information.items():
             for level in levels:
                 prof_info = run_ml_or_module(model_name, bs, seq_len,
                                              probe_repeats, runs, device,
-                                             level, level_name)
+                                             level, level_name, multi_gpu)
                 if prof_info is None:
                     continue
                 prof_info['type'] = level_name
