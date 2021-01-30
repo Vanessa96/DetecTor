@@ -17,10 +17,10 @@ pd.set_option('display.float_format', '{:.6f}'.format)
 res_names = ['cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk']
 
 feature_names = ['batch_size', 'seq_len', 'flops',
-                 'mem_bytes'] + res_names + [f'{k}_std' for k in res_names] + \
-                ['times_mean', 'times_std_percent',
-                 'gpu_energy_mean', 'gpu_energy_std_percent',
-                 'energy_mean', 'energy_std_percent',
+                 'mem_bytes'] + res_names + \
+                ['times_mean',
+                 'gpu_energy_mean',
+                 'energy_mean',
                  'level_name', 'model_name']
 
 
@@ -59,7 +59,7 @@ def main(args):
                     prof_info = json.load(f)
                 process_record(energy, prof_info, res, feature_values,
                                model_name, bs, runs, seq_len)
-        info = pd.DataFrame(data=feature_values).dropna()
+        info = pd.DataFrame(data=feature_values)
         infos.append(info)
         print(f'{model_name} done.')
     pd.concat(infos).to_csv(feature_file, index=False)
@@ -81,7 +81,7 @@ def process_record(energy, prof_info, res, feature_values,
         for r in range(1, runs + 1):
             start_r = prof_item[f'start_{r}']
             end_r = prof_item[f'end_{r}']
-            times_runs.append(end_r - start_r)
+            times_runs.append((end_r - start_r) / repeats)
 
             res_s = bisect.bisect_right(res_t, start_r)
             res_e = bisect.bisect_right(res_t, end_r)
@@ -98,28 +98,28 @@ def process_record(energy, prof_info, res, feature_values,
             energy_runs.append(energy_r)
 
         times_mean = np.mean(times_runs)
-        times_std = np.std(times_runs) / times_mean * 100
+        # times_std = np.std(times_runs) / times_mean * 100
         gpu_power_mean = np.mean(gpu_power_runs)
-        gpu_power_std = np.std(gpu_power_runs) / gpu_power_mean * 100
+        # gpu_power_std = np.std(gpu_power_runs) / gpu_power_mean * 100
         energy_mean = np.mean(energy_runs)
-        energy_std = np.std(energy_runs) / energy_mean * 100
+        # energy_std = np.std(energy_runs) / energy_mean * 100
         for rn in res_names:
             feature_values[rn].append(np.mean(res_runs[rn]))
-            rn_std = np.std(res_runs[rn]) / np.mean(res_runs[rn]) * 100
-            feature_values[f'{rn}_std'].append(rn_std)
+            # rn_std = np.std(res_runs[rn]) / np.mean(res_runs[rn]) * 100
+            # feature_values[f'{rn}_std'].append(rn_std)
 
         flops = prof_item['flops'] / 1e6
         mem_bytes = prof_item['mem_bytes'] / 1024 / 1024
         feature_values['batch_size'].append(bs)
         feature_values['seq_len'].append(seq_len)
         feature_values['energy_mean'].append(energy_mean)
-        feature_values['energy_std_percent'].append(energy_std)
+        # feature_values['energy_std_percent'].append(energy_std)
         feature_values['gpu_energy_mean'].append(gpu_power_mean)
-        feature_values['gpu_energy_std_percent'].append(gpu_power_std)
+        # feature_values['gpu_energy_std_percent'].append(gpu_power_std)
         feature_values['flops'].append(flops)
         feature_values['mem_bytes'].append(mem_bytes)
         feature_values['times_mean'].append(times_mean)
-        feature_values['times_std_percent'].append(times_std)
+        # feature_values['times_std_percent'].append(times_std)
         feature_values['level_name'].append(prof_item['name'])
         feature_values['model_name'].append(model_name)
 
