@@ -71,7 +71,7 @@ def is_float(x):
 
 
 def get_hw_energy(energy_file):
-    energy = pd.read_csv(energy_file, error_bad_lines=False, usecols=[0, 2])
+    energy = pd.read_csv(energy_file, error_bad_lines=False, usecols=[0, 1])
     energy = energy[energy['value'].apply(lambda x: is_float(x))]
     energy = energy[energy['timestamp'].apply(lambda x: is_float(x))]
 
