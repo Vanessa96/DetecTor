@@ -132,19 +132,19 @@ if __name__ == "__main__":
                         help="experiment name")
     parser.add_argument("-ef", "--energy_file", type=str, default=None)
     parser.add_argument("-rf", "--res_file", type=str, default=None)
-    parser.add_argument("-bt", "--batch_start", type=int, default=4,
+    parser.add_argument("-bt", "--batch_start", type=int, default=8,
                         help="batch size start")
-    parser.add_argument("-b", "--batch_size", type=int, default=36,
+    parser.add_argument("-b", "--batch_size", type=int, default=33,
                         help="batch size")
-    parser.add_argument("-bs", "--batch_step", type=int, default=4,
+    parser.add_argument("-bs", "--batch_step", type=int, default=8,
                         help="batch size step")
-    parser.add_argument("-ss", "--seq_step", type=int, default=16,
+    parser.add_argument("-ss", "--seq_step", type=int, default=32,
                         help="input size step")
-    parser.add_argument("-is", "--input_start", type=int, default=8,
+    parser.add_argument("-is", "--input_start", type=int, default=32,
                         help="input sequence length")
-    parser.add_argument("-i", "--input_length", type=int, default=265,
+    parser.add_argument("-i", "--input_length", type=int, default=257,
                         help="input sequence length")
-    parser.add_argument("-r", "--runs", type=int, default=5,
+    parser.add_argument("-r", "--runs", type=int, default=1,
                         help="iterations to run the model")
     parser.add_argument("-m", "--models", type=str, nargs="+",
                         help="model name supported by the "
