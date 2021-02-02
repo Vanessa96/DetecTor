@@ -63,8 +63,6 @@ def run_model(model_name, bs, seq_len, probe_repeats, runs, device, multi_gpu):
     config.torchscript = True
     model = AutoModel.from_config(config)
     model = model.eval().to(device)
-    if multi_gpu:
-        model = torch.nn.DataParallel(model)
     input_ids = torch.randint(1000, size=(bs, seq_len), dtype=torch.long,
                               device=device)
     inputs = (input_ids,)
@@ -74,6 +72,8 @@ def run_model(model_name, bs, seq_len, probe_repeats, runs, device, multi_gpu):
     flops, mem_bytes = get_model_flops_mem_bytes(model, inputs,
                                                  model_name, device)
     model_prof = dict(name=model_name, flops=flops, mem_bytes=mem_bytes)
+    if multi_gpu:
+        model = torch.nn.DataParallel(model)
     repeats = calibrate_repeats(model, inputs, {}, probe_repeats)
     model_prof['repeats'] = repeats
     logger.info(f'{model_name}_b{bs}_i{seq_len}, '
