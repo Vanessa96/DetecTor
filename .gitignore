@@ -160,3 +160,5 @@ tags
 
 # pre-commit
 .pre-commit*
+
+*.pdf
