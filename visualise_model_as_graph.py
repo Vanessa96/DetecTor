@@ -33,9 +33,10 @@ class TreeNode(object):
         self.gold_energy = None
         self.predicted_energy = None
         self.loss = None
-        self.percentage_error = None
         self.subtree_loss = None
-        self.subtree_percentage_error = None
+        self.subtree_error_sum = None
+        self.subtree_error_count = None
+        self.subtree_error_perc = None
 
     def __str__(self):
         ret = "(" + self.scope.split('.')[-1]
