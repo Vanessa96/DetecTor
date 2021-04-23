@@ -17,6 +17,7 @@ from run_level_exp import construct_aggregation_graph
 from graphviz import Digraph
 import copy
 from functools import lru_cache
+from collections import OrderedDict
 
 class TreeNode(object):
     def __init__(self, scope, instance_type, level, parent_name, callable_module):
@@ -37,6 +38,22 @@ class TreeNode(object):
         self.subtree_error_sum = None
         self.subtree_error_count = None
         self.subtree_error_perc = None
+
+        # feature attributes from earlier stages of end to end pipeline
+        # feature_values - dict_keys(['batch_size', 'seq_len', 'flops', 'mem_bytes', 
+        # 'cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk', 'times_mean', 
+        # 'gpu_energy_mean', 'level_name', 'level_type', 'model_name'])
+        self.flops = None
+        self.mem_bytes = None
+        self.cpu = None
+        self.mem = None
+        self.gpu = None
+        self.gpu_mem = None
+        self.gpu_clk = None
+        self.gpu_mem_clk = None
+        self.times_mean = None
+        self.gpu_energy_mean = None
+        self.level_type = None
 
     def __str__(self):
         ret = "(" + self.scope.split('.')[-1]
@@ -162,7 +179,7 @@ def create_tree_from_modules(model):
     root_operation = model_operation_information[0]
     root = TreeNode('root', root_operation[1], 0, '', operations[2])
 
-    tree = {}
+    tree = OrderedDict()
     tree['root'] = root
 
     # create nodes and keep track of parent-child relationships
