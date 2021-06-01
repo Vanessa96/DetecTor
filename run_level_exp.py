@@ -188,13 +188,13 @@ def main(args):
     if prof_info_file.exists():
         logger.info(f'{filename} already profiled, skip')
         return
-    if level_type == 'model':
-        if args.log_energy_consumption:
-            from experiment_impact_tracker.compute_tracker import ImpactTracker
+    if args.log_energy_consumption:
+        from experiment_impact_tracker.compute_tracker import ImpactTracker
 
-            logger.info("Launching impact tracker...")
-            tracker = ImpactTracker(args.energy_output_dir)
-            tracker.launch_impact_monitor()
+        logger.info("Launching impact tracker...")
+        tracker = ImpactTracker(args.energy_output_dir)
+        tracker.launch_impact_monitor()
+    if level_type == 'model':
         prof_info = run_model(model_name, bs, seq_len,
                               probe_repeats, runs, device, multi_gpu)
         model_prof_info.append(prof_info)

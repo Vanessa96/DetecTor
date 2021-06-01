@@ -29,12 +29,14 @@ def main(args):
     seq_len = args.input_length
     bs = args.batch_size
     model_name = args.model_name
-    # print(f'{model_name} energy (J): {energy * 3.6e6:.2f}')
+    level_type = args.level_type
     energy_file = args.energy_file
-    hw_energy = get_hw_energy(energy_file)
+    if not args.software_only:
+        print(f'{model_name} energy (J): {energy * 3.6e6:.2f}')
+        hw_energy = get_hw_energy(energy_file)
 
     model_name_s = sanitize(model_name)
-    filename = f'{model_name_s}_model_r{runs}_b{bs}_i{seq_len}.json'
+    filename = f'{model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len}.json'
     profile_dir = Path(args.profile_dir)
     prof_info_file = profile_dir.joinpath(filename)
     with open(prof_info_file) as f:
@@ -42,20 +44,24 @@ def main(args):
         repeats = prof_item['repeats']
     sw_avg_energy = sw_energy * 3.6e6 / repeats / runs
 
-    energy_np = hw_energy.to_numpy()
-    energy_t = energy_np[:, 0]
-    energy_runs = []
-    for r in range(1, runs + 1):
-        start_r = prof_item[f'start_{r}']
-        end_r = prof_item[f'end_{r}']
-        e_s = bisect.bisect_right(energy_t, start_r)
-        e_e = bisect.bisect_right(energy_t, end_r)
-        # sampling rate is 170 ms
-        energy_r = hw_energy[e_s:e_e]['value'].div(repeats).sum() * 0.17
-        energy_runs.append(energy_r)
-    energy_mean = np.mean(energy_runs)
-    print(f'sw_energy: {sw_avg_energy:.2f}, hw_energy: {energy_mean:.2f} (J)'
-          f' for {model_name_s}_r{runs}_b{bs}_i{seq_len} avg over {repeats}')
+    if not args.software_only:
+        energy_np = hw_energy.to_numpy()
+        energy_t = energy_np[:, 0]
+        energy_runs = []
+        for r in range(1, runs + 1):
+            start_r = prof_item[f'start_{r}']
+            end_r = prof_item[f'end_{r}']
+            e_s = bisect.bisect_right(energy_t, start_r)
+            e_e = bisect.bisect_right(energy_t, end_r)
+            # sampling rate is 170 ms
+            energy_r = hw_energy[e_s:e_e]['value'].div(repeats).sum() * 0.17
+            energy_runs.append(energy_r)
+        energy_mean = np.mean(energy_runs)
+        print(f'sw_energy: {sw_avg_energy:.2f}, hw_energy: {energy_mean:.2f} (J)'
+            f' for {model_name_s}_r{runs}_b{bs}_i{seq_len} avg over {repeats}')
+    else:
+        print(f'sw_energy: {sw_avg_energy:.2f}, '
+            f' for {model_name_s}_{level_type}_r{runs}_b{bs}_i{seq_len} avg over {repeats}')
 
 
 if __name__ == "__main__":
@@ -70,6 +76,11 @@ if __name__ == "__main__":
                         help="input sequence length")
     parser.add_argument("-r", "--runs", type=int, default=1,
                         help="iterations to run the model")
+    parser.add_argument("-t", "--level_type", type=str, required=True,
+                        choices=('ml', 'ml-np', 'module', 'model'),
+                        help="ml, module, model type")
+    parser.add_argument("-sw", "--software-only", dest='software_only', action='store_true',
+                        help='Calculate only software energy')
     parser.add_argument("-m", "--model_name", type=str,
                         help="model string supported by the "
                              "HuggingFace Transformers library")
