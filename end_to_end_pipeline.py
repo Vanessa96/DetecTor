@@ -22,6 +22,8 @@ import bisect
 import pickle
 import pandas as pd
 import numpy as np
+import json
+import copy
 from transformers import AutoConfig
 from transformers import AutoModel
 
@@ -49,8 +51,8 @@ def parse_args():
     parser.add_argument("-m", "--model_name", type=str,
                         help="model string supported by the "
                              "HuggingFace Transformers library")
-    parser.add_argument("-c", "--cache_dir", type=str,
-                        help="Directory to cache model into")
+    parser.add_argument("-j", "--json_dir", type=str,
+                        help="Directory to save model as JSON into")
     parser.add_argument("--res_file", type=str,
                         help="File to log resource usage into; "
                              "Used by rprof profiler")
@@ -102,15 +104,71 @@ def process_record(prof_info, res, feature_values,
         feature_values['level_type'].append(prof_item['level_type'])
         feature_values['model_name'].append(model_name)
 
+def flatten_node_to_json(obj):
+
+    """
+    Convert node to JSON object
+    """
+
+    data = {}
+    data['scope'] = obj.scope
+    data['level'] = obj.level
+    data['parent_name'] = obj.parent_name
+    data['child_nodes'] = []
+    for child in obj.child_nodes:
+        data['child_nodes'].append(child.scope)
+    data['flops'] = obj.flops
+    data['mem_bytes'] = obj.mem_bytes
+    data['cpu'] = obj.cpu
+    data['mem'] = obj.mem
+    data['gpu'] = obj.gpu
+    data['gpu_mem'] = obj.gpu_mem
+    data['gpu_clk'] = obj.gpu_clk
+    data['gpu_mem_clk'] = obj.gpu_mem_clk
+    data['times_mean'] = obj.times_mean
+    data['gpu_energy_mean'] = obj.gpu_energy_mean
+    data['level_type'] = obj.level_type
+
+    return data
+
+def flatten_leaf_nodes(objs):
+    
+    """
+    Convert list of leaf nodes to JSON object
+    """
+
+    data = {}
+    for obj in objs:
+        json_obj = flatten_node_to_json(obj)
+        data[obj.scope] = json_obj
+    return data
+
+def flatten_tree(tree):
+
+    """
+    Convert tree to flat JSON object
+    """
+
+    data = {}
+    for k,v in tree.items():
+        json_obj = flatten_node_to_json(v)
+        data[k] = json_obj
+    return data
+
 def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe_repeats, res_file):
+
+    """
+    Run full end to end pipeline
+    It converts model to graph, then extracts features into files, reconciles features and returns the root and tree objects
+    """
 
     root, tree, _ = run_model_to_graph(model_name, device)
     print(tree.keys())
 
     # run profiler
     print('Run profiler')
-    prof_cmd = 'cd rprof; ./rprof 170 ' + res_file + ' 50 &'
-    os.system(prof_cmd)
+    prof_cmd = ['./rprof', '170', res_file, '50']
+    subprocess.call(prof_cmd, cwd='rprof/')
 
     model_prof_info = []
     level_types = ['ml', 'ml-np']
@@ -242,6 +300,91 @@ def add_features_to_tree(node, id_to_feature_map):
 
         for child in node.child_nodes:
             add_features_to_tree(child, id_to_feature_map)
+
+def add_child_objects_into_node(node, tree_json):
+
+    """
+    For each child name, add the corresponding object to a new field in the node
+    """
+
+    node_children = []
+    for child_node_name in node['child_nodes']:
+        node_children.append(tree_json[child_node_name])
+    node['child_nodes_obj'] = node_children
+
+def add_empty_child_objects_into_node(node):
+
+    """
+    If a node does not have children, create an empty child_nodes_obj field that matches child_nodes field
+    This can likely be integrated into add_child_objects_into_node() with an empty flag as well
+    """
+
+    node['child_nodes_obj'] = []
+
+def create_frontend_compatible_data(root_json, tree_json):
+
+    """
+    Convert files to required nested JSON format supported by D3 frontend
+    """
+
+    if root_json['child_nodes'] == []:
+        add_empty_child_objects_into_node(root_json)
+        return
+    add_child_objects_into_node(root_json, tree_json)
+    for child_node_name in root_json['child_nodes']:
+        create_frontend_compatible_data(tree_json[child_node_name], tree_json)
+
+def serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repeats, res_file, start_time):
+
+    """
+    Function called by API
+    """
+
+    fname = model_name+"_"+str(seq_len)+"_"+str(bs)
+    if os.path.exists(os.path.join(json_dir, fname+"_root.json")) and os.path.exists(os.path.join(json_dir, fname+"_leaf.json")) and os.path.exists(os.path.join(json_dir, fname+"_tree.json")):
+        end_time = time.time()
+        print(f'Takes {end_time-start_time} seconds to run')
+        with open(os.path.join(json_dir, fname+'_root.json'), 'r') as fp:
+            root_json = json.load(fp)
+
+        with open(os.path.join(json_dir, fname+'_leaf.json'), 'r') as fp:
+            leaf_json = json.load(fp)
+
+        with open(os.path.join(json_dir, fname+'_tree.json'), 'r') as fp:
+            tree_json = json.load(fp)
+
+    else:
+        root, tree = end_to_end(model_name, bs, seq_len, device, multi_gpu, runs, probe_repeats, res_file)
+        leaf_nodes = find_leaf_nodes(tree)
+        end_time = time.time()
+        print(f'Takes {end_time-start_time} seconds to run')
+
+        # save root, tree and leaf nodes into pickle objects for future use
+
+        root_json = flatten_node_to_json(root)
+        leaf_json = flatten_leaf_nodes(leaf_nodes)
+        tree_json = flatten_tree(tree)
+
+        with open(os.path.join(json_dir, fname+'_root.json'), 'w+') as fp:
+            json.dump(root_json, fp)
+
+        with open(os.path.join(json_dir, fname+'_leaf.json'), 'w+') as fp:
+            json.dump(leaf_json, fp)
+
+        with open(os.path.join(json_dir, fname+'_tree.json'), 'w+') as fp:
+            json.dump(tree_json, fp)
+
+    compatible_tree = copy.deepcopy(root_json)
+
+    create_frontend_compatible_data(compatible_tree, tree_json)
+
+    with open(os.path.join(json_dir, fname+'_frontend_tree.json'), 'w+') as fp:
+        json.dump(compatible_tree, fp)
+
+    final_time = time.time()
+    print(f'Takes {final_time-end_time} seconds to finish everything after logging step')
+
+    return root_json, tree_json, leaf_json, compatible_tree
     
 def main(args):
     start_time = time.time()
@@ -256,19 +399,9 @@ def main(args):
     runs = args.runs
     probe_repeats = args.probe_repeats
     res_file = args.res_file
-    cache_dir = args.cache_dir
-    root, tree = end_to_end(model_name, bs, seq_len, device, multi_gpu, runs, probe_repeats, res_file)
-    if os.path.exists(os.path.join(cache_dir, model_name+"_"+str(seq_len)+"_"+str(bs))):
-        end_time = time.time()
-    else:
-        root, tree = end_to_end(model_name, bs, seq_len, device, multi_gpu, runs, probe_repeats, res_file)
-        leaf_nodes = find_leaf_nodes(tree)
-        end_time = time.time()
-        print(f'Takes {end_time-start_time} seconds to run')
-        print('Saving to pickle files')
-        pickle.dump([root, tree, leaf_nodes], open(os.path.join(cache_dir, model_name+"_"+str(seq_len)+"_"+str(bs)), "wb"))
-    final_time = time.time()
-    print(f'Takes {final_time-end_time} seconds to finish everything after logging step')
+    json_dir = args.json_dir
+
+    root_json, tree_json, leaf_json, compatible_tree = serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repeats, res_file, start_time)
 
 if __name__ == '__main__':
     args = parse_args()
