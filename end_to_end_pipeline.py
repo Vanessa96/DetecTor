@@ -28,7 +28,7 @@ from transformers import AutoConfig
 from transformers import AutoModel
 
 from calibrate_e_ml import get_module_info
-from run_level_exp import run_ml_or_module
+from run_level_exp import run_ml_or_module, run_model
 from visualise_model_as_graph import run_model_to_graph
 
 res_names = ['cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk']
@@ -36,7 +36,7 @@ feature_names = ['batch_size', 'seq_len', 'flops',
                 'mem_bytes'] + res_names + \
                 ['times_mean',
                 'gpu_energy_mean',
-                'level_name', 'level_type', 'model_name']
+                'level_name', 'type', 'model_name']
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -101,7 +101,7 @@ def process_record(prof_info, res, feature_values,
         feature_values['mem_bytes'].append(mem_bytes)
         feature_values['times_mean'].append(times_mean)
         feature_values['level_name'].append(prof_item['name'])
-        feature_values['level_type'].append(prof_item['level_type'])
+        feature_values['type'].append(prof_item['type'])
         feature_values['model_name'].append(model_name)
 
 def flatten_node_to_json(obj):
@@ -127,7 +127,7 @@ def flatten_node_to_json(obj):
     data['gpu_mem_clk'] = obj.gpu_mem_clk
     data['times_mean'] = obj.times_mean
     data['gpu_energy_mean'] = obj.gpu_energy_mean
-    data['level_type'] = obj.level_type
+    data['type'] = obj.type
 
     return data
 
@@ -163,22 +163,25 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
     """
 
     root, tree, _ = run_model_to_graph(model_name, device)
-    print(tree.keys())
 
     # run profiler
     print('Run profiler')
-    prof_cmd = ['./rprof', '170', res_file, '50']
-    subprocess.call(prof_cmd, cwd='rprof/')
+    prof_cmd = "cd rprof/; ./rprof 170 "+res_file+" 10000"
+    print(prof_cmd)
+    proc = subprocess.Popen(prof_cmd, shell=True)
 
     model_prof_info = []
-    level_types = ['ml', 'ml-np']
+    level_types = ['ml', 'ml-np', 'module']
     for level_type in level_types:
         # call get_module_info with level_type=ml and ml-np
+        print(f'Getting module information for {level_type}')
         information = get_module_info(model_name, batch_size, input_len, device, level_type)
 
         # call run_ml_or_module with level_type=ml and ml-np and module
         for level_name, levels in information.items():
             for level in levels:
+                # possible duplication of module data due to calling ml and ml-np
+                print(f'Running {level_name}')
                 prof_info = run_ml_or_module(model_name, batch_size, input_len,
                                              probe_repeats, runs, device,
                                              level, level_name, multi_gpu)
@@ -186,9 +189,13 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
                 torch.cuda.empty_cache()
                 if prof_info is None:
                     continue
-                prof_info['type'] = level_name
-                prof_info['level_type'] = level_type
+                prof_info['type'] = level_type
                 model_prof_info.append(prof_info)
+    print('Running model')
+    prof_info = run_model(model_name, batch_size, input_len,
+                              probe_repeats, runs, device, multi_gpu)
+    prof_info['type'] = 'model'
+    model_prof_info.append(prof_info)
 
     # res_file - resources log file (res.csv)
     print('Read resources log file')
@@ -198,27 +205,25 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
     feature_values = {k: [] for k in feature_names}
     process_record(model_prof_info, res, feature_values, model_name, batch_size, runs, input_len)
 
-    # feature_values = json.load(open('temp.json', 'r'))
-
     # feature attributes from earlier stages of end to end pipeline
     # feature_values - dict_keys(['batch_size', 'seq_len', 'flops', 'mem_bytes', 
     # 'cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk', 'times_mean', 
-    # 'gpu_energy_mean', 'level_name', 'level_type', 'model_name'])
+    # 'gpu_energy_mean', 'level_name', 'type', 'model_name'])
     print('Reconciling features with model graph now')
     num_feature_records = len(feature_values['level_name'])
     id_to_feature_map = {}
     for i in range(num_feature_records):
         name = feature_values['level_name'][i]
-        scope, module_type = name.split(':')
-        identifier = 'root.'+scope
+        if name == model_name:
+            identifier = 'root'
+        else:
+            scope, module_type = name.split(':')
+            identifier = 'root.'+scope
         identifier = identifier.replace('layer.', '')
 
         # hack to make both naming conventions compatible
         if module_type == 'MatMul' or module_type == 'Softmax':
             identifier = identifier + '.' + module_type.lower()
-        if identifier in id_to_feature_map:
-            print("Hello "+name.replace('layer.', ''))
-            print(identifier)
 
         feature_map = {}
         feature_map['flops'] = feature_values['flops'][i]
@@ -231,7 +236,7 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
         feature_map['gpu_mem_clk'] = feature_values['gpu_mem_clk'][i]
         feature_map['times_mean'] = feature_values['times_mean'][i]
         feature_map['gpu_energy_mean'] = feature_values['gpu_energy_mean'][i]
-        feature_map['level_type'] = feature_values['level_type'][i]
+        feature_map['type'] = feature_values['type'][i]
         id_to_feature_map[identifier] = feature_map
 
     # reconcile monitored features with tree dictionary
@@ -249,15 +254,13 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
             node.gpu_mem_clk = features['gpu_mem_clk']
             node.times_mean = features['times_mean']
             node.gpu_energy_mean = features['gpu_energy_mean']
-            node.level_type = features['level_type']
+            node.type = features['type']
         except:
             print(identifier)
 
     add_features_to_tree(root, id_to_feature_map)
 
-    os.system("rm -rf rprof/"+res_file)
-
-    return root, tree
+    return root, tree, proc
 
 def find_leaf_nodes(tree):
     
@@ -293,7 +296,7 @@ def add_features_to_tree(node, id_to_feature_map):
             node.gpu_mem_clk = features['gpu_mem_clk']
             node.times_mean = features['times_mean']
             node.gpu_energy_mean = features['gpu_energy_mean']
-            node.level_type = features['level_type']
+            node.type = features['type']
         except:
             print("Stuff in root not in feature map")
             print(identifier)
@@ -354,7 +357,7 @@ def serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repe
             tree_json = json.load(fp)
 
     else:
-        root, tree = end_to_end(model_name, bs, seq_len, device, multi_gpu, runs, probe_repeats, res_file)
+        root, tree, proc = end_to_end(model_name, bs, seq_len, device, multi_gpu, runs, probe_repeats, res_file)
         leaf_nodes = find_leaf_nodes(tree)
         end_time = time.time()
         print(f'Takes {end_time-start_time} seconds to run')
@@ -383,6 +386,9 @@ def serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repe
 
     final_time = time.time()
     print(f'Takes {final_time-end_time} seconds to finish everything after logging step')
+
+    os.command("rprof/"+res_file)
+    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 
     return root_json, tree_json, leaf_json, compatible_tree
     

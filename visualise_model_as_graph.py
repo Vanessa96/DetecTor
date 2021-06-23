@@ -42,7 +42,7 @@ class TreeNode(object):
         # feature attributes from earlier stages of end to end pipeline
         # feature_values - dict_keys(['batch_size', 'seq_len', 'flops', 'mem_bytes', 
         # 'cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk', 'times_mean', 
-        # 'gpu_energy_mean', 'level_name', 'level_type', 'model_name'])
+        # 'gpu_energy_mean', 'level_name', 'type', 'model_name'])
         self.flops = None
         self.mem_bytes = None
         self.cpu = None
@@ -53,7 +53,7 @@ class TreeNode(object):
         self.gpu_mem_clk = None
         self.times_mean = None
         self.gpu_energy_mean = None
-        self.level_type = None
+        self.type = None
 
     def __str__(self):
         ret = "(" + self.scope.split('.')[-1]
