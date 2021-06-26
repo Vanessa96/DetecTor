@@ -1,0 +1,1 @@
+{"scope": "root", "level": 0, "parent_name": "", "child_nodes": ["root.embeddings", "root.transformer"], "flops": 200413.937664, "mem_bytes": 6756.78515625, "cpu": 8.314024940401895, "mem": 8.0, "gpu": 0.0, "gpu_mem": 0.0, "gpu_clk": 139.0, "gpu_mem_clk": 405.0, "times_mean": 0.03198417628743521, "gpu_energy_mean": 0.3757089197530865, "type": "model"}

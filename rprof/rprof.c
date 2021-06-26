@@ -176,8 +176,8 @@ int main(int argc, char ** argv) {
     fprintf(output_file, "%.6f,%.1f,%.1f,%i", sample_time/1e6, cpu_util, mem_usage, device_count);
     if (print_count%print_gap==0)
     {
-      printf("\33[2K\r");
-      printf("t=%.6f, cpu=%.1f, mem=%.1f, n_gpu=%i", sample_time/1e6, cpu_util, mem_usage, device_count);
+      // printf("\33[2K\r");
+      // printf("t=%.6f, cpu=%.1f, mem=%.1f, n_gpu=%i", sample_time/1e6, cpu_util, mem_usage, device_count);
     }
     for (unsigned device_idx = 0; device_idx < device_count; device_idx++) 
     {
@@ -218,13 +218,13 @@ int main(int argc, char ** argv) {
       fprintf(output_file, ",%i,%i,%i,%i,%i", gpu_util, gpu_mem_util, gpu_power, sm_clock, mem_clock);
       if (print_count%print_gap==0)
       {
-        printf(", gpu=%i, gpu_mem=%i, gpu_power=%i, sm_clock=%i, gpu_mem_clock=%i", gpu_util, gpu_mem_util, gpu_power, sm_clock, mem_clock);
+        // printf(", gpu=%i, gpu_mem=%i, gpu_power=%i, sm_clock=%i, gpu_mem_clock=%i", gpu_util, gpu_mem_util, gpu_power, sm_clock, mem_clock);
       }
     }
     fprintf(output_file, "\n");
     if (print_count%print_gap==0)
     {
-      printf("\n");
+      // printf("\n");
     }
     print_count++;
 

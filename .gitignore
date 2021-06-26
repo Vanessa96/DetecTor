@@ -162,3 +162,5 @@ tags
 .pre-commit*
 
 *.pdf
+
+rprof/rprof

@@ -17,6 +17,7 @@ from common import sanitize
 import torch
 import gc
 import subprocess
+import signal
 import os
 import bisect
 import pickle
@@ -169,8 +170,10 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
     prof_cmd = "cd rprof/; ./rprof 170 "+res_file+" 10000"
     print(prof_cmd)
     proc = subprocess.Popen(prof_cmd, shell=True)
+    print(f'Profiler process ID: {proc.pid}')
 
     model_prof_info = []
+    # open a features file here and log everything after run_* function call
     level_types = ['ml', 'ml-np', 'module']
     for level_type in level_types:
         # call get_module_info with level_type=ml and ml-np
@@ -190,6 +193,7 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
                 if prof_info is None:
                     continue
                 prof_info['type'] = level_type
+                # import pdb; pdb.set_trace()
                 model_prof_info.append(prof_info)
     print('Running model')
     prof_info = run_model(model_name, batch_size, input_len,
@@ -205,10 +209,6 @@ def end_to_end(model_name, batch_size, input_len, device, multi_gpu, runs, probe
     feature_values = {k: [] for k in feature_names}
     process_record(model_prof_info, res, feature_values, model_name, batch_size, runs, input_len)
 
-    # feature attributes from earlier stages of end to end pipeline
-    # feature_values - dict_keys(['batch_size', 'seq_len', 'flops', 'mem_bytes', 
-    # 'cpu', 'mem', 'gpu', 'gpu_mem', 'gpu_clk', 'gpu_mem_clk', 'times_mean', 
-    # 'gpu_energy_mean', 'level_name', 'type', 'model_name'])
     print('Reconciling features with model graph now')
     num_feature_records = len(feature_values['level_name'])
     id_to_feature_map = {}
@@ -337,13 +337,29 @@ def create_frontend_compatible_data(root_json, tree_json):
     for child_node_name in root_json['child_nodes']:
         create_frontend_compatible_data(tree_json[child_node_name], tree_json)
 
+def save_files(json_dir, model_fname, tree_json, root_json, leaf_json):
+
+    """
+    Save requisite root, tree and leaf nodes object
+    """
+
+    with open(os.path.join(json_dir, model_fname+'_root.json'), 'w+') as fp:
+        json.dump(root_json, fp)
+
+    with open(os.path.join(json_dir, model_fname+'_leaf.json'), 'w+') as fp:
+        json.dump(leaf_json, fp)
+
+    with open(os.path.join(json_dir, model_fname+'_tree.json'), 'w+') as fp:
+        json.dump(tree_json, fp)
+
 def serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repeats, res_file, start_time):
 
     """
     Function called by API
     """
 
-    fname = model_name+"_"+str(seq_len)+"_"+str(bs)
+    model_fname = model_name.replace("/", "-")
+    fname = model_fname+"_"+str(seq_len)+"_"+str(bs)
     if os.path.exists(os.path.join(json_dir, fname+"_root.json")) and os.path.exists(os.path.join(json_dir, fname+"_leaf.json")) and os.path.exists(os.path.join(json_dir, fname+"_tree.json")):
         end_time = time.time()
         print(f'Takes {end_time-start_time} seconds to run')
@@ -368,14 +384,7 @@ def serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repe
         leaf_json = flatten_leaf_nodes(leaf_nodes)
         tree_json = flatten_tree(tree)
 
-        with open(os.path.join(json_dir, fname+'_root.json'), 'w+') as fp:
-            json.dump(root_json, fp)
-
-        with open(os.path.join(json_dir, fname+'_leaf.json'), 'w+') as fp:
-            json.dump(leaf_json, fp)
-
-        with open(os.path.join(json_dir, fname+'_tree.json'), 'w+') as fp:
-            json.dump(tree_json, fp)
+        save_files(json_dir, fname, tree_json, root_json, leaf_json)
 
     compatible_tree = copy.deepcopy(root_json)
 
@@ -385,10 +394,21 @@ def serve(model_name, seq_len, bs, json_dir, device, multi_gpu, runs, probe_repe
         json.dump(compatible_tree, fp)
 
     final_time = time.time()
-    print(f'Takes {final_time-end_time} seconds to finish everything after logging step')
 
-    os.command("rprof/"+res_file)
-    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    try:
+        # these variables don't exist if the files are loaded from memory
+        kill_pid = proc.pid+1
+        print(f'Killing process {kill_pid}')
+        os.kill(kill_pid, signal.SIGTERM)
+        del_cmd = "rm rprof/"+res_file
+        print(del_cmd)
+        os.system(del_cmd)
+        # sleep needed to allow process kill before next command is run (wrt batch shell script)
+        time.sleep(3)
+    except:
+        pass
+
+    print(f'Takes {final_time-end_time} seconds to finish everything after logging step')
 
     return root_json, tree_json, leaf_json, compatible_tree
     
