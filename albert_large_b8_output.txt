@@ -1,45 +1,0 @@
-profile_interval=170 ms
-log to albert_large.csv
-timeout=50 s
-
-Driver version:  440.33.01 
-
-Found 2 devices
-
-Listing devices:
-0. GeForce GTX 1070 
-1. GeForce GTX 1070 
-[2Kt=1620185203.462706, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=15054, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=36147, sm_clock=1657, gpu_mem_clock=3802
-[2Kt=1620185205.165396, cpu=0.6, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=14723, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34121, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185206.868112, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=14819, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34121, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185208.570801, cpu=3.2, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=14869, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34218, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185210.273499, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=14819, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34107, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185211.976191, cpu=0.6, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=14819, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34218, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185213.678912, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=20169, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34187, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185215.381701, cpu=0.6, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=13314, sm_clock=696, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34218, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185217.084457, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=13218, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34121, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185218.787210, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=13314, sm_clock=139, gpu_mem_clock=810, gpu=0, gpu_mem=0, gpu_power=34218, sm_clock=1506, gpu_mem_clock=3802
-[2Kt=1620185220.489973, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9042, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=30166, sm_clock=911, gpu_mem_clock=3802
-[2Kt=1620185222.192750, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9270, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=7415, sm_clock=708, gpu_mem_clock=810
-[2Kt=1620185223.895526, cpu=1.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=11697, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=7510, sm_clock=708, gpu_mem_clock=810
-[2Kt=1620185225.598272, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=8978, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6738, sm_clock=164, gpu_mem_clock=405
-[2Kt=1620185227.301008, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6737, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185229.003760, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=8880, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6639, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185230.706517, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6834, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185232.409294, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6639, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185234.112058, cpu=0.6, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6737, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185235.814811, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6738, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185237.517527, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=8978, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6737, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185239.220283, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6737, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185240.923012, cpu=0.6, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=11261, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6931, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185242.625755, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6737, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185244.328460, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9078, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6738, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185246.031226, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6590, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185247.733959, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6639, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185249.436692, cpu=0.6, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9172, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6834, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185251.139445, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=9074, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6834, sm_clock=139, gpu_mem_clock=405
-[2Kt=1620185252.842183, cpu=0.1, mem=8.0, n_gpu=2, gpu=0, gpu_mem=0, gpu_power=8978, sm_clock=139, gpu_mem_clock=405, gpu=0, gpu_mem=0, gpu_power=6737, sm_clock=139, gpu_mem_clock=405
-
-elapsed 50130.511 ms
-odict_keys(['root', 'root.embeddings', 'root.embeddings.word_embeddings', 'root.embeddings.position_embeddings', 'root.embeddings.token_type_embeddings', 'root.embeddings.LayerNorm', 'root.encoder', 'root.encoder.embedding_hidden_mapping_in', 'root.encoder.0', 'root.encoder.0.0', 'root.encoder.0.0.full_layer_layer_norm', 'root.encoder.0.0.attention', 'root.encoder.0.0.attention.query', 'root.encoder.0.0.attention.key', 'root.encoder.0.0.attention.value', 'root.encoder.0.0.attention.dense', 'root.encoder.0.0.attention.LayerNorm', 'root.encoder.0.0.ffn', 'root.encoder.0.0.ffn_output', 'root.pooler', 'root.pooler_activation', 'root.encoder.0.0.attention.matmul', 'root.encoder.0.0.attention.softmax', 'root.encoder.0.0.attention.einsum'])
-Run profiler
