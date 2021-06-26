@@ -1,0 +1,150 @@
+Downloading:   0%|          | 0.00/685 [00:00<?, ?B/s]Downloading: 100%|██████████| 685/685 [00:00<00:00, 625kB/s]
+/home/yash/.pyenv/versions/nrg/lib/python3.7/site-packages/transformers/models/albert/modeling_albert.py:231: TracerWarning: Converting a tensor to a Python index might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
+/home/yash/.pyenv/versions/nrg/lib/python3.7/site-packages/transformers/modeling_utils.py:1760: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  input_tensor.shape[chunk_dim] == tensor_shape for input_tensor in input_tensors
+INFO:2021-05-04_23:27:39.333:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Embedding, flops=0, mem_bytes=1597440, repeats=839172, embeddings.word_embeddings:Embedding
+INFO:2021-05-04_23:27:58.963:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Embedding, (1/3) embeddings.word_embeddings:Embedding done.
+INFO:2021-05-04_23:28:19.798:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Embedding, (2/3) embeddings.word_embeddings:Embedding done.
+INFO:2021-05-04_23:28:40.516:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Embedding, (3/3) embeddings.word_embeddings:Embedding done.
+INFO:2021-05-04_23:28:41.599:/home/yash/DetecTor/run_level_exp.py:142: embeddings.token_type_embeddings:Embedding already profiled, return value from Embedding,0,1597440
+INFO:2021-05-04_23:28:46.644:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Embedding, flops=0, mem_bytes=199680, repeats=790944, embeddings.position_embeddings:Embedding
+INFO:2021-05-04_23:29:05.339:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Embedding, (1/3) embeddings.position_embeddings:Embedding done.
+INFO:2021-05-04_23:29:25.206:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Embedding, (2/3) embeddings.position_embeddings:Embedding done.
+INFO:2021-05-04_23:29:45.119:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Embedding, (3/3) embeddings.position_embeddings:Embedding done.
+INFO:2021-05-04_23:29:51.182:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_LayerNorm, flops=3145728, mem_bytes=6291456, repeats=218496, embeddings.LayerNorm:LayerNorm
+INFO:2021-05-04_23:30:11.178:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_LayerNorm, (1/3) embeddings.LayerNorm:LayerNorm done.
+INFO:2021-05-04_23:30:32.222:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_LayerNorm, (2/3) embeddings.LayerNorm:LayerNorm done.
+INFO:2021-05-04_23:30:53.308:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_LayerNorm, (3/3) embeddings.LayerNorm:LayerNorm done.
+INFO:2021-05-04_23:30:59.476:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_LayerNorm, flops=25165824, mem_bytes=50331648, repeats=89064, encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm:LayerNorm
+INFO:2021-05-04_23:31:19.953:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_LayerNorm, (1/3) encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm:LayerNorm done.
+INFO:2021-05-04_23:31:41.342:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_LayerNorm, (2/3) encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm:LayerNorm done.
+INFO:2021-05-04_23:32:02.739:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_LayerNorm, (3/3) encoder.albert_layer_groups.0.albert_layers.0.attention.LayerNorm:LayerNorm done.
+INFO:2021-05-04_23:32:03.905:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.full_layer_layer_norm:LayerNorm already profiled, return value from LayerNorm,25165824,50331648
+INFO:2021-05-04_23:32:09.054:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Linear, flops=808452096, mem_bytes=43515904, repeats=69624, encoder.embedding_hidden_mapping_in:Linear
+INFO:2021-05-04_23:32:29.658:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (1/3) encoder.embedding_hidden_mapping_in:Linear done.
+INFO:2021-05-04_23:32:51.482:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (2/3) encoder.embedding_hidden_mapping_in:Linear done.
+INFO:2021-05-04_23:33:13.290:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (3/3) encoder.embedding_hidden_mapping_in:Linear done.
+INFO:2021-05-04_23:33:19.559:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Linear, flops=6445596672, mem_bytes=83886080, repeats=15996, encoder.albert_layer_groups.0.albert_layers.0.attention.query:Linear
+INFO:2021-05-04_23:33:43.029:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (1/3) encoder.albert_layer_groups.0.albert_layers.0.attention.query:Linear done.
+INFO:2021-05-04_23:34:06.499:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (2/3) encoder.albert_layer_groups.0.albert_layers.0.attention.query:Linear done.
+INFO:2021-05-04_23:34:30.149:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (3/3) encoder.albert_layer_groups.0.albert_layers.0.attention.query:Linear done.
+INFO:2021-05-04_23:34:31.397:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention.key:Linear already profiled, return value from Linear,6445596672,83886080
+INFO:2021-05-04_23:34:31.621:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention.value:Linear already profiled, return value from Linear,6445596672,83886080
+INFO:2021-05-04_23:34:37.270:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Linear, flops=25782386688, mem_bytes=297795584, repeats=5736, encoder.albert_layer_groups.0.albert_layers.0.ffn:Linear
+INFO:2021-05-04_23:35:09.293:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (1/3) encoder.albert_layer_groups.0.albert_layers.0.ffn:Linear done.
+INFO:2021-05-04_23:35:41.531:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (2/3) encoder.albert_layer_groups.0.albert_layers.0.ffn:Linear done.
+INFO:2021-05-04_23:36:14.028:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (3/3) encoder.albert_layer_groups.0.albert_layers.0.ffn:Linear done.
+INFO:2021-05-04_23:36:22.393:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Linear, flops=25772949504, mem_bytes=222298112, repeats=5820, encoder.albert_layer_groups.0.albert_layers.0.ffn_output:Linear
+INFO:2021-05-04_23:36:54.555:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (1/3) encoder.albert_layer_groups.0.albert_layers.0.ffn_output:Linear done.
+INFO:2021-05-04_23:37:26.493:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (2/3) encoder.albert_layer_groups.0.albert_layers.0.ffn_output:Linear done.
+INFO:2021-05-04_23:37:58.528:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (3/3) encoder.albert_layer_groups.0.albert_layers.0.ffn_output:Linear done.
+INFO:2021-05-04_23:38:06.388:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Linear, flops=16777216, mem_bytes=4259840, repeats=452928, pooler:Linear
+INFO:2021-05-04_23:38:25.965:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (1/3) pooler:Linear done.
+INFO:2021-05-04_23:38:46.703:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (2/3) pooler:Linear done.
+INFO:2021-05-04_23:39:07.365:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Linear, (3/3) pooler:Linear done.
+INFO:2021-05-04_23:39:13.408:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_Tanh, flops=32768, mem_bytes=32768, repeats=1189632, pooler_activation:Tanh
+INFO:2021-05-04_23:39:32.119:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Tanh, (1/3) pooler_activation:Tanh done.
+INFO:2021-05-04_23:39:51.911:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Tanh, (2/3) pooler_activation:Tanh done.
+INFO:2021-05-04_23:40:11.798:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_Tanh, (3/3) pooler_activation:Tanh done.
+INFO:2021-05-04_23:40:22.333:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_matmul, flops=2415919104, mem_bytes=100663296, repeats=34284, encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul
+INFO:2021-05-04_23:40:45.072:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_matmul, (1/3) encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul done.
+INFO:2021-05-04_23:41:08.106:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_matmul, (2/3) encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul done.
+INFO:2021-05-04_23:41:30.996:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_matmul, (3/3) encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul done.
+INFO:2021-05-04_23:41:32.299:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:32.859:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:33.091:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:33.599:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:33.812:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:34.328:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:34.539:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:35.050:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:35.263:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:35.774:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:35.988:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:36.499:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:36.710:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:37.217:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:37.427:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:37.932:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:38.165:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:38.687:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:38.900:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:39.417:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:39.627:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:40.148:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:40.364:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:40.874:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:41.110:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:41.636:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:41.850:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:42.355:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:42.568:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:43.086:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:43.299:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:43.809:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:44.023:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:44.534:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:44.746:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:45.259:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:45.472:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:45.985:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:46.196:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:46.713:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:46.927:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:47.442:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:47.652:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:48.167:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:48.382:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:48.889:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:49.102:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:MatMul already profiled, return value from matmul,2415919104,100663296
+INFO:2021-05-04_23:41:54.670:/home/yash/DetecTor/run_level_exp.py:150: albert-large-v2_b8_i384_softmax, flops=94371840, mem_bytes=226492416, repeats=30804, encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax
+INFO:2021-05-04_23:42:17.736:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_softmax, (1/3) encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax done.
+INFO:2021-05-04_23:42:41.038:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_softmax, (2/3) encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax done.
+INFO:2021-05-04_23:43:04.345:/home/yash/DetecTor/run_level_exp.py:160: run albert-large-v2_b8_i384_softmax, (3/3) encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax done.
+INFO:2021-05-04_23:43:06.009:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:06.586:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:07.128:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:07.673:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:08.221:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:08.793:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:09.337:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:09.882:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:10.450:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:10.995:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:11.541:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:12.083:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:12.625:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:13.173:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:13.717:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:14.262:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:14.808:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:15.353:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:15.896:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:16.439:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:16.979:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:17.522:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+INFO:2021-05-04_23:43:18.067:/home/yash/DetecTor/run_level_exp.py:142: encoder.albert_layer_groups.0.albert_layers.0.attention:Softmax already profiled, return value from softmax,94371840,226492416
+Traceback (most recent call last):
+  File "end_to_end_pipeline.py", line 285, in <module>
+    main(args)
+  File "end_to_end_pipeline.py", line 270, in main
+    root, tree = end_to_end(model_name, bs, seq_len, device, multi_gpu, runs, probe_repeats, res_file)
+  File "end_to_end_pipeline.py", line 133, in end_to_end
+    level, level_name, multi_gpu)
+  File "/home/yash/DetecTor/run_level_exp.py", line 136, in run_ml_or_module
+    flops, mem_bytes = get_model_flops_mem_bytes(fn, ti, fname, device)
+  File "/home/yash/DetecTor/run_level_exp.py", line 37, in get_model_flops_mem_bytes
+    trace = torch.jit.trace(module_fn.cpu(), cpu_inputs)
+  File "/home/yash/.pyenv/versions/nrg/lib/python3.7/site-packages/torch/jit/_trace.py", line 742, in trace
+    _module_class,
+  File "/home/yash/.pyenv/versions/nrg/lib/python3.7/site-packages/torch/jit/_trace.py", line 940, in trace_module
+    _force_outplace,
+  File "<patchy>", line 11, in _call_impl
+  File "/home/yash/.pyenv/versions/nrg/lib/python3.7/site-packages/torch/nn/modules/module.py", line 709, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "/home/yash/DetecTor/calibrate_e_ml.py", line 156, in forward
+    return torch.einsum(self.transformation, *x)
+  File "/home/yash/.pyenv/versions/nrg/lib/python3.7/site-packages/torch/functional.py", line 344, in einsum
+    return _VF.einsum(equation, operands)  # type: ignore
+RuntimeError: more operands in equation than tensors
